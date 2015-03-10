@@ -39,7 +39,7 @@ Prerequisites:
 
 ---------------------------------------------------
 Usage
-
+<pre><code>
 zip2wd_r3.py [options] <input file>
 
 Options:
@@ -55,6 +55,7 @@ Options:
   -z, --zip2ws          Search by closest table of zip2ws
   --columns=COLUMNS     Column names file (default: column-names.txt)
 
+</code></pre>
 USAGE EXAMPLE :-
 1) Search weather data from 5 closest stations
    python zip2wd_r4.py -c 5 naes00r.csv
