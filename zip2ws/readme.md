@@ -1,6 +1,4 @@
-~~~~~~~~~~~~~~~~~~~~~~
-Readme for the data
-~~~~~~~~~~~~~~~~~~~~~~
+#### zip2ws
 
 The following fields from:  free-zipcode-database-primary.csv
    (http://federalgovernmentzipcodes.us/free-zipcode-database-Primary.csv)
@@ -15,11 +13,6 @@ list of stations: ordered from closest to furthest
 stX_id: station id
 stX_name: name of station
 stX_distance: distance to zip centroid
-
-----------------------------
-
-Readme for the script
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 What it does: 
 1. Finds (certain kinds of) weather stations "nearest" (within a certain distance, or X number of closest) to each zip code centroid
