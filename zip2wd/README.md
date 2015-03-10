@@ -1,21 +1,19 @@
-What it does:
-Given a zip code and a date or a range of dates, it gets 
-weather data (you get to specify which data) from the closest weather 
-station from which the data are available. If given a range of dates, it 
-fetches all the specified columns for each of the days in the intervening period.
+#### zip2wd
+
+
+Given a zip code and a date or a range of dates, it gets weather data (you get to specify which data) from the closest weather 
+station from which the data are available. If given a range of dates, it fetches all the specified columns for each of the days in the intervening p
+period.
 
 How it does it:
-This script is based of the script that calculates nearest weather station
-based on variety of metrics. It is available from http://gsood.com/data
 
-You can use a variety of options to choose the kinds of weather stations
-from which you want data. For instance, you can get data only from USAF 
-stations. 
+This script is based of the script that calculates nearest weather station based on variety of metrics. 
 
-The script features on demand data downloads. So it pings the local directory
-and sees if weather data for a particular day and time are present and if they 
-are not, then it tries to download it from the NOAA website. On occassion
-the script may run into bandwidth bottlenecks and you may want to run the script again
+You can use a variety of options to choose the kinds of weather stations from which you want data. For instance, you can get 
+data only from USAF stations. 
+
+The script features on demand data downloads. So it pings the local directory and sees if weather data for a particular day and time are present and if they 
+are not, then it tries to download it from the NOAA website. On occassion the script may run into bandwidth bottlenecks and you may want to run the script again
 to download all the data that is needed.
 
 Prerequisites:
