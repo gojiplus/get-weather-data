@@ -49,7 +49,7 @@ zip csv that is imported. The inventories folder should be in the same folder
 as the script.
 
 ----------------------------
-
+<pre><code>
 Usage: zip2ws_r3.py [options]
 
 Options:
@@ -72,6 +72,7 @@ Options:
   --clear-glatlon       Clear Google Maps Geocoding API Lat/Lon
   --use-zlatlon         Use Zip Lat/Lon instead of Google Geocoding Lat/Lon
 
+</code></pre>
 
 Start using the script by creating and importing the database.
 Do so by running -
