@@ -1,9 +1,7 @@
-#### zip2wd
+### zip2wd
 
 
-Given a zip code and a date or a range of dates, it gets weather data (you get to specify which data) from the closest weather 
-station from which the data are available. If given a range of dates, it fetches all the specified columns for each of the days in the intervening p
-period.
+Given a zip code and a date or a range of dates, it gets weather data (you get to specify which data) from the closest weather station from which the data are available. If given a range of dates, it fetches all the specified columns for each of the days in the intervening p period.
 
 How it does it:
 
@@ -12,9 +10,7 @@ This script is based of the script that calculates nearest weather station based
 You can use a variety of options to choose the kinds of weather stations from which you want data. For instance, you can get 
 data only from USAF stations. 
 
-The script features on demand data downloads. So it pings the local directory and sees if weather data for a particular day and time are present and if they 
-are not, then it tries to download it from the NOAA website. On occassion the script may run into bandwidth bottlenecks and you may want to run the script again
-to download all the data that is needed.
+The script features on demand data downloads. So it pings the local directory and sees if weather data for a particular day and time are present and if they are not, then it tries to download it from the NOAA website. On occassion the script may run into bandwidth bottlenecks and you may want to run the script again to download all the data that is needed.
 
 Prerequisites:
 ----------------------
@@ -22,7 +18,7 @@ Prerequisites:
    This sqlite database can be updated using this script as well. So only the 
    shell is needed.
   
-2. Input File Types -
+2. Input File Types:  
 	a. Basic: The input file format should be CSV and should contain 6 columns with 
 	following columns names:- "uniqid","zip","year","month","day"
 	(see 'naes00r.csv' for sample input file)
@@ -56,7 +52,9 @@ Options:
   --columns=COLUMNS     Column names file (default: column-names.txt)
 
 </code></pre>
+
 USAGE EXAMPLE :-
+------------------
 1) Search weather data from 5 closest stations
    python zip2wd_r4.py -c 5 naes00r.csv
 
@@ -66,7 +64,7 @@ USAGE EXAMPLE :-
 3) Search weather data using pre-calculated zip stations list from closest table
    python zip2wd_r4.py -z naes00r.csv
 
-   NOTE THAT :-
+   NOTE THAT:-  
    Pre-calculated zip-stations list can be updated by zip2ws script for example :- 
    python zip2ws_r3.py -c --ghcn=0 --coop=0 --usaf=10
    
@@ -76,13 +74,13 @@ USAGE EXAMPLE :-
 What you get
 -------------------------
 Output -
-	For each day you get weather columns that you mention in column-names
-	See column-names-info for details
-	SID = Station ID
-	type= Type of Station
-	Name = Name of Area
-	Lat  = Latitude
-	Long = Longitude
-	Nth  = N on the list of closest weather stations
+	For each day you get weather columns that you mention in column-names  
+	See column-names-info for details  
+	SID = Station ID  
+	type= Type of Station  
+	Name = Name of Area  
+	Lat  = Latitude  
+	Long = Longitude  
+	Nth  = N on the list of closest weather stations  
 	Distance = Distance from zip code centroid to weather station lat/long in meters
 		   
