@@ -56,17 +56,17 @@ Options:
 USAGE EXAMPLE :-
 ------------------
 1) Search weather data from 5 closest stations
-   python zip2wd_r4.py -c 5 naes00r.csv
+   <pre><code>python zip2wd_r4.py -c 5 naes00r.csv</code></pre>
 
 2) Search weather data from closest stations within 30km
-   python zip2wd_r4.py -d 30 naes00r.csv
+    <pre><code>python zip2wd_r4.py -d 30 naes00r.csv</code></pre>
 
 3) Search weather data using pre-calculated zip stations list from closest table
-   python zip2wd_r4.py -z naes00r.csv
+    <pre><code>python zip2wd_r4.py -z naes00r.csv</code></pre>
 
    NOTE THAT:-  
    Pre-calculated zip-stations list can be updated by zip2ws script for example :- 
-   python zip2ws_r3.py -c --ghcn=0 --coop=0 --usaf=10
+   <pre><code>python zip2ws_r3.py -c --ghcn=0 --coop=0 --usaf=10</code></pre>
    
    The above command calculates and updates the closest table with 10 closest USAF-WBAN station type
    (For more detail please look at README.TXT of zip2ws script)
