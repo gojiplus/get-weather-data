@@ -1,6 +1,6 @@
 ## Weather Data
 
-Read [gbytes.gsood.com/.../bad-weather-getting-weather-data-by-zip-and-date/](Bad Weather: Getting weather data by zip and date).
+Read [http://gbytes.gsood.com/.../bad-weather-getting-weather-data-by-zip-and-date/](Bad Weather: Getting weather data by zip and date).
 
 1. Find nearest zip codes given a list of weather stations (COOP and GHCND) via<br>&nbsp;geonames:&nbsp;<a href="https://github.com/soodoku/Weather-Data/tree/master/ws2zip">Data and scripts</a>
 
