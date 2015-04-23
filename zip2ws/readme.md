@@ -5,7 +5,8 @@
 2. Finds centroids of zip codes using Google API 
 
 #### Additional Details
-Weather stations come in lots of varieties. We limit ourselves to weather stations of the following four kinds -
+Weather stations come in lots of varieties. We limit ourselves to weather stations of the following four kinds:  
+
 1. ghcnd-stations.txt ==> GHCND stations list
    (http://www1.ncdc.noaa.gov/pub/data/ghcn/daily/ghcnd-stations.txt)
    
@@ -18,6 +19,7 @@ Weather stations come in lots of varieties. We limit ourselves to weather statio
 4. ish-history.csv    ==> USAF-WBAN stations list
    (http://www1.ncdc.noaa.gov/pub/data/ish/ish-history.csv)
 
+#### Origin of fields
 The following fields from: [http://federalgovernmentzipcodes.us/free-zipcode-database-Primary.csv](http://federalgovernmentzipcodes.us/free-zipcode-database-Primary.csv): 
 zip, lat, long, city, state, zipcodetype, locationtype, location, decommisioned, taxreturns, estimatedpopulation, totalwages
 
