@@ -5,4 +5,8 @@ Get data from nearest weather station given a list of zip codes and date (see [s
 The script needs an API token from NOAA. You can get a token from the [NCDC site](http://www.ncdc.noaa.gov/cdo-web/token).
 
 #### Usage
-<pre><code>noaaweb.py.py samplein.csv sampleout.csv</code></pre>
+<pre><code>noaaweb.py samplein.csv sampleout.csv</code></pre>
+
+#### License
+The script is under the [MIT License](https://github.com/soodoku/Weather-Data/blob/master/License.md).
+
