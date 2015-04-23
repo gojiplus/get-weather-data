@@ -1,14 +1,3 @@
-##--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~--++
-##                                                        
-##        Get the (5) nearest zip codes for GHCND or COOP weather station files (lat./long.)
-##        Last Edited: 7.10.13               
-##        Author: Gaurav Sood                             
-##		 
-##        COOP Station List from: http://www.ncdc.noaa.gov/homr/reports/platforms;jsessionid=794891457456A71118A5D0D81CA80100
-##		  Depends on geonames: https://github.com/ashchristopher/python-geonames
-##        Geonames depends on urllib/2
-##        In geonames.py amend timeout settings for urllib: resource = urllib2.urlopen(uri, timeout=500).readlines()
-##--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~--++
 
 import re
 import geonames
