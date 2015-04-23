@@ -1,20 +1,15 @@
-##--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~--++
-##                                                        
-##        Get weather data from weather station nearest to a zip code using NOAA web service
-##        Last Edited: 7.10.13               
-##        Author: Gaurav Sood                             
-## 
-##        Get token from http://www.ncdc.noaa.gov/cdo-web/token
-##        Replace token_here with the token you get
-##--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~--++
+'''
+        Get weather data from weather station nearest to a zip code using NOAA web service
+    
+        Get token from http://www.ncdc.noaa.gov/cdo-web/token
+        Replace token_here with the token you get
+'''
 
 import csv
 import urllib2
 
-
 import time
 import xml.etree.ElementTree as ET
-
 
 def get_station_id(data):
     stations = {}
