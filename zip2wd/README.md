@@ -1,5 +1,4 @@
-### zip2wd
-
+### zip2wd: Get Weather Data For a List of Zip Codes For a Range of Dates
 
 Given a zip code and a date or a range of dates, it gets weather data (you get to specify which data) from the closest weather station from which the data are available. If given a range of dates, it fetches all the specified columns for each of the days in the intervening p period.
 
@@ -12,8 +11,8 @@ data only from USAF stations.
 
 The script features on demand data downloads. So it pings the local directory and sees if weather data for a particular day and time are present and if they are not, then it tries to download it from the NOAA website. On occassion the script may run into bandwidth bottlenecks and you may want to run the script again to download all the data that is needed.
 
-Prerequisites:
-----------------------
+#### Prerequisites:
+
 1. zip2ws.sqlite is based off finding the nearest weather station project.
    This sqlite database can be updated using this script as well. So only the 
    shell is needed.
@@ -33,8 +32,7 @@ Prerequisites:
 
 	For what these column names stand for, look at: column-names-info.txt
 
----------------------------------------------------
-Usage
+#### Usage
 <pre><code>
 zip2wd_r3.py [options] <input file>
 
@@ -53,26 +51,26 @@ Options:
 
 </code></pre>
 
-USAGE EXAMPLE :-
-------------------
-1) Search weather data from 5 closest stations
+#### Example:
+
+1. Search weather data from 5 closest stations
    <pre><code>python zip2wd_r4.py -c 5 naes00r.csv</code></pre>
 
-2) Search weather data from closest stations within 30km
+2. Search weather data from closest stations within 30km
     <pre><code>python zip2wd_r4.py -d 30 naes00r.csv</code></pre>
 
-3) Search weather data using pre-calculated zip stations list from closest table
+3. Search weather data using pre-calculated zip stations list from closest table
     <pre><code>python zip2wd_r4.py -z naes00r.csv</code></pre>
 
-   NOTE THAT:-  
+   Note:  
    Pre-calculated zip-stations list can be updated by zip2ws script for example :- 
    <pre><code>python zip2ws_r3.py -c --ghcn=0 --coop=0 --usaf=10</code></pre>
    
    The above command calculates and updates the closest table with 10 closest USAF-WBAN station type
    (For more detail please look at README.TXT of zip2ws script)
 
-What you get
--------------------------
+#### What you get
+
 Output -
 	For each day you get weather columns that you mention in column-names  
 	See column-names-info for details  
@@ -83,4 +81,3 @@ Output -
 	Long = Longitude  
 	Nth  = N on the list of closest weather stations  
 	Distance = Distance from zip code centroid to weather station lat/long in meters
-		   
