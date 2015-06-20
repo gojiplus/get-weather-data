@@ -1,0 +1,12 @@
+urllib2
+geonames
+urllib
+sqlite3
+calendar
+optparse
+signal
+gzip
+datetime
+logging
+pygeocoder
+xml.etree.ElementTree
