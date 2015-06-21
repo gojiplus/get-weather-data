@@ -10,7 +10,6 @@ sudo: required
 
 install:
     - pip install --upgrade pip
-    - pip install urllib
     - pip install urllib2
     - pip install geonames
     - pip install sqlite3
