@@ -13,6 +13,7 @@ install:
     - pip install geonames
     - pip install pygeocoder
     - pip install lxml
+    - pip install requests
 
 script:
     - python noaaweb/noaaweb.py noaaweb/samplein.csv noaaweb/sampleout.csv
