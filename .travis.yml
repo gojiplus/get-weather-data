@@ -12,7 +12,7 @@ install:
     - pip install --upgrade pip
     - pip install geonames
     - pip install pygeocoder
-    - pip install elementtree
+    - pip install python-lxml
 
 script:
     - python noaaweb/noaaweb.py noaaweb/samplein.csv noaaweb/sampleout.csv
