@@ -11,11 +11,11 @@ sudo: required
 install:
     - pip install --upgrade pip
     - pip install geonames
-    - pip install calendar
     - pip install pygeocoder
     - pip install elementtree
 
-script: nosetests
+script:
+    - python noaaweb/noaaweb.py noaaweb/samplein.csv noaaweb/sampleout.csv
 
 
 
