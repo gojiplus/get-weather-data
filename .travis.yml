@@ -12,11 +12,13 @@ install:
     - pip install --upgrade pip
     - pip install geonames
     - pip install pygeocoder
-    - pip install python-lxml
+    - pip install lxml
 
 script:
     - python noaaweb/noaaweb.py noaaweb/samplein.csv noaaweb/sampleout.csv
-
+    - python ws2zip/weather.py
+    - python zip2wd/zip2wd_r4.py -c 5 python sample-input-basic.csv
+    - python zip2ws/zip2ws_r3.py -i
 
 
 
