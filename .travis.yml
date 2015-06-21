@@ -1,10 +1,32 @@
 language: python
+
 python:
-    - 2.6
     - 2.7
-    - 3.2
+
+notifications:
+  email: false
 
 sudo: required
 
-env:
-    - DEPS=false
+install:
+    - pip install --upgrade pip
+    - pip install urllib
+    - pip install urllib2
+    - pip install geonames
+    - pip install sqlite3
+    - pip install signal
+    - pip install gzip
+    - pip install calendar
+    - pip install datetime
+    - pip install logging
+    - pip install pygeocoder
+    - pip install elementtree
+
+script: nosetests
+
+
+
+
+
+
+
