@@ -7,17 +7,17 @@
 #### Additional Details
 Weather stations come in lots of varieties. We limit ourselves to weather stations of the following four kinds:  
 
-1. ghcnd-stations.txt ==> GHCND stations list
-   (http://www1.ncdc.noaa.gov/pub/data/ghcn/daily/ghcnd-stations.txt)
+1. [GHCND stations list](inventories/ghcnd-stations.txt). For current list, see:
+   [http://www1.ncdc.noaa.gov/pub/data/ghcn/daily/ghcnd-stations.txt](http://www1.ncdc.noaa.gov/pub/data/ghcn/daily/ghcnd-stations.txt)
    
-2. asos-stations.txt  ==> ASOS stations list
-   (http://www.ncdc.noaa.gov/homr/file/asos-stations.txt)
+2. [ASOS stations list](asos-stations.txt). For current list, see:
+   [http://www.ncdc.noaa.gov/homr/file/asos-stations.txt](http://www.ncdc.noaa.gov/homr/file/asos-stations.txt)
    
-3. coop-act.txt       ==> COOP stations list (Active only)
-   (ftp://ftp.ncdc.noaa.gov/pub/data/inventories/COOP-ACT.TXT)
+3. [COOP stations list (Active only)](coop-act.txt). For current list, see:
+   [ftp://ftp.ncdc.noaa.gov/pub/data/inventories/COOP-ACT.TXT](ftp://ftp.ncdc.noaa.gov/pub/data/inventories/COOP-ACT.TXT)
    
-4. ish-history.csv    ==> USAF-WBAN stations list
-   (http://www1.ncdc.noaa.gov/pub/data/ish/ish-history.csv)
+4. [USAF-WBAN stations list](ish-history.csv). For current list, see:
+   [http://www1.ncdc.noaa.gov/pub/data/ish/ish-history.csv](http://www1.ncdc.noaa.gov/pub/data/ish/ish-history.csv)
 
 #### Origin of fields
 The following fields from: [http://federalgovernmentzipcodes.us/free-zipcode-database-Primary.csv](http://federalgovernmentzipcodes.us/free-zipcode-database-Primary.csv): 
@@ -33,13 +33,13 @@ stX_distance: distance to zip centroid
 
 ####Running the script
 
-To run the script, you will need to install two Python libraries - 
+To run the script, you will need to install two Python libraries:
 
-pygeocoder (https://bitbucket.org/xster/pygeocoder/wiki/Home)
-   (To install, you can simply use: $ pip install pygeocoder)
+* [pygeocoder](https://bitbucket.org/xster/pygeocoder/wiki/Home)
+   To install, you can simply use: `$ pip install pygeocoder`
    
-requests (http://docs.python-requests.org/en/latest/)
-   (To install, you can simply user: $ pip install requests)
+* [requests](http://docs.python-requests.org/en/latest/)
+   To install, you can simply user: `$ pip install requests`
 
 Don't forget the inventories directory  that contains the station files and zip csv that is imported. The inventories folder should be in the same folder as the script.
 
