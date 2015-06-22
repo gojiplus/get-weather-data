@@ -1,15 +1,20 @@
 '''
-        Get weather data from weather station nearest to a zip code using NOAA web service
+Get weather data from weather station nearest to a zip code using NOAA web service
     
-        Get token from http://www.ncdc.noaa.gov/cdo-web/token
-        Replace token_here with the token you get
-'''
+Get token from http://www.ncdc.noaa.gov/cdo-web/token
+Replace token_here with the token you get
 
+'''
+import sys
+import optparse
 import csv
 import urllib2
 
 import time
 import xml.etree.ElementTree as ET
+
+CSV_OUTPUT_FILE     = 'output.csv'
+NCDC_TOKEN          = 'YcnZInRPxWnyyDEvysQNaTHrtgMEMHZD'
 
 def get_station_id(data):
     stations = {}
@@ -156,7 +161,7 @@ def get_PRECIP_HLY(zipcode, year, month, day, token):
 
 
 def load_save_csvfile(infilename, outfilename):
-    token = 'token_here'
+    token = NCDC_TOKEN
     total_rows = 0
     #no, uniquid, zip, year, month, day, (columns for station information for DAILY), 30 columns for DAILY, (columns for station information for HOURLY), 24 columns for HOURLY
     start_line = '"","uniqid","zip","year","month","day","GHCND id","Display Name","Lat","Long","FIPS (CNTY)","FIPS (ST)","ZIP","ZIP Display Name",' + \
@@ -181,6 +186,7 @@ def load_save_csvfile(infilename, outfilename):
         for row in output:
             total_rows += 1
         output.close();
+        
     except IOError:
         None
 
@@ -197,6 +203,7 @@ def load_save_csvfile(infilename, outfilename):
         reader = csv.reader(csvfile, delimiter=',', quotechar='"')
         j = -1
         for row in reader:
+          
             j += 1
             if j < total_rows:
                 continue
@@ -207,7 +214,7 @@ def load_save_csvfile(infilename, outfilename):
             day = row[5]
 
             print "row: " + str(row)
-
+           
             row1 = row
             try:
                 row.extend(get_GHCND(zipcode, year, month, day, token))
@@ -234,8 +241,26 @@ def load_save_csvfile(infilename, outfilename):
 
     output.close()
 
+def parse_command_line(argv):
+    """Command line options parser for the script
+    """
+    usage = "usage: %prog [options] <input file>"
+            
+    parser = optparse.OptionParser(usage=usage)
+    parser.add_option("-o", "--outfile", action="store", 
+                      dest="outfile", default=CSV_OUTPUT_FILE,
+                      help="CSV Output file name (default: %s)" % (CSV_OUTPUT_FILE))
+    return parser.parse_args(argv)
 
-load_save_csvfile('samplein.csv', 'sampleout.csv')
+if __name__ == "__main__":
+    (options, args) = parse_command_line(sys.argv)
+    if len(args) < 2:
+        print("Please specific input file")
+    else:
+        options.inputfile = args[1]
+        load_save_csvfile(options.inputfile, options.outfile)
+
+#load_save_csvfile(samplein.csv', 'sampleout1.csv')
 # <cdoError>
 # <script/>
 # <name>Temporarily Unavailable</name>

@@ -13,14 +13,9 @@ install:
     - pip install geonames
     - pip install pygeocoder
     - pip install lxml
-    - pip install requests
-    - pip install fiona
 
 script:
-    - python noaaweb/noaaweb.py https://raw.githubusercontent.com/soodoku/get-weather-data/master/noaaweb/samplein.csv
-    - python ws2zip/weather.py
-    - python zip2wd/zip2wd_r4.py -c 5 python sample-input-basic.csv
-    - python zip2ws/zip2ws_r3.py -i
+    - python noaaweb/noaaweb.py noaaweb/samplein.csv
 
 
 
