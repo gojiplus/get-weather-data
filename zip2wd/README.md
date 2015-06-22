@@ -13,28 +13,28 @@ The script features on demand data downloads. So it pings the local directory an
 
 #### Prerequisites:
 
-1. zip2ws.sqlite is based off finding the nearest weather station project.
+1. zip2ws.sqlite is based off finding the nearest weather station project.  
    This sqlite database can be updated using this script as well. So only the 
    shell is needed.
   
 2. Input File Types:  
-	a. Basic: The input file format should be CSV and should contain 6 columns with 
-	following columns names:- "uniqid","zip","year","month","day"
-	(see 'naes00r.csv' for sample input file)
+	a. Basic: The input file format should be CSV and should contain 6 columns with following columns names:   
+  "uniqid","zip","year","month","day"  
+	(see [sample-input-basic.csv](sample-input-basic.csv) for sample input file)
 
-	b. Extended: The input file format contain 9 columns with the following columns names:-
-	"uniqid","zip","from.year","from.month","from.day","to.year","to.month","to.day"
-	(see 'naes00r-extended.csv' for sample input file)
+	b. Extended: The input file format contain 9 columns with the following columns names:  
+	"uniqid","zip","from.year","from.month","from.day","to.year","to.month","to.day"  
+	(see [sample-input-extend.csv](sample-input-extend.csv) for sample input file)
 
-3. Column Name File: This file contain list of weather data columns chosen for output file.
-	The column names begining with character '#' will not be appear in the output file
-	(see 'column-names.txt' for sample file)
+3. Column Name File: This file contain list of weather data columns chosen for output file.  
+	The column names begining with character '#' will not be appear in the output file  
+	(see [column-names.txt](column-names.txt) for sample file)
 
-	For what these column names stand for, look at: column-names-info.txt
+	For what these column names stand for, look at: [column-names-info.txt](column-names-info.txt)
 
 #### Usage
-<pre><code>
-zip2wd_r3.py [options] <input file>
+```
+zip2wd.py [options] <input file>
 
 Options:
   -h, --help            show this help message and exit
@@ -49,22 +49,22 @@ Options:
   -z, --zip2ws          Search by closest table of zip2ws
   --columns=COLUMNS     Column names file (default: column-names.txt)
 
-</code></pre>
+```
 
 #### Example:
 
 1. Search weather data from 5 closest stations
-   <pre><code>python zip2wd_r4.py -c 5 naes00r.csv</code></pre>
+    ```python zip2wd.py -c 5 naes00r.csv```
 
 2. Search weather data from closest stations within 30km
-    <pre><code>python zip2wd_r4.py -d 30 naes00r.csv</code></pre>
+    ```python zip2wd.py -d 30 naes00r.csv```
 
 3. Search weather data using pre-calculated zip stations list from closest table
-    <pre><code>python zip2wd_r4.py -z naes00r.csv</code></pre>
+    ```python zip2wd.py -z naes00r.csv```
 
-   Note:  
+   **Note:**  
    Pre-calculated zip-stations list can be updated by zip2ws script for example :- 
-   <pre><code>python zip2ws_r3.py -c --ghcn=0 --coop=0 --usaf=10</code></pre>
+    ```python zip2ws.py -c --ghcn=0 --coop=0 --usaf=10```
    
    The above command calculates and updates the closest table with 10 closest USAF-WBAN station type
    (For more detail please look at README.TXT of zip2ws script)
