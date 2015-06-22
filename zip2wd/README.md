@@ -13,7 +13,7 @@ The script features on demand data downloads. So it pings the local directory an
 
 #### Prerequisites:
 
-1. zip2ws.sqlite is based off finding the nearest weather station project.  
+1. [zip2ws.sqlite](zip2ws.sqlite) is based off finding the nearest weather station project.  
    This sqlite database can be updated using this script as well. 
   
 2. Input File Types:  
