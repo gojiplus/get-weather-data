@@ -10,6 +10,7 @@ The script needs an API token from NOAA. You can get a token from the [NCDC site
 * The default output file name is `output.csv`. To specify a custom output file name, pass `-o outfilename_of_choice`.
 * The script keeps track of the rows that have been processed. (It does so by taking row number from the output file as the start.) Thus, if halted in between, it will start with the last processed row. 
 
+#### Example
 <pre><code>python noaaweb.py samplein.csv -o sampleout.csv</code></pre>
 
 #### License
