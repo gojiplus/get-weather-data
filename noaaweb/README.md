@@ -1,8 +1,11 @@
-### Get Weather Data from Weather Station Nearest to a Zip Code using the NOAA Web Service
+### Get Data from Weather Station Nearest to a Zip Code using the NOAA Web Service
 
-Get data from nearest weather station given a list of zip codes and date (see [sample input file](https://github.com/soodoku/Weather-Data/blob/master/noaaweb/samplein.csv) for the format in which data are expected) using the [NOAA webservice](https://www.ncdc.noaa.gov/cdo-web/webservices). The script appends all the weather data from NOAA along with the GHCND id, name, lat. and longitude of the weather station from which the data are being gotten to the input file (see [sample output file](https://github.com/soodoku/Weather-Data/blob/master/noaaweb/sampleout.csv)).
+Get data from nearest weather station given a list of zip codes and date (see [sample input file](samplein.csv) for the format in which data are expected) using the [NOAA webservice](https://www.ncdc.noaa.gov/cdo-web/webservices). The script appends all the weather data from NOAA along with the GHCND id, name, lat. and longitude of the weather station from which the data are being gotten to the input file (see [sample output file](sampleout.csv)).
 
 The script needs an API token from NOAA. You can get a token from the [NCDC site](http://www.ncdc.noaa.gov/cdo-web/token).
+
+#### Note 
+Requests to NOAA API "often return nothing. It isn't clear why. The documentation doesn't say whether the search for the closest weather station is limited to X kilometers because without that, one should have data for all zip codes and all dates. Nor does the API bother to return how far the weather station is from which it got the data." (From [Bad Weather: Getting weather data by zip and date](http://gbytes.gsood.com/2013/06/27/bad-weather-getting-weather-data-by-zip-and-date/)). See for instance [sample output file](sampleout.csv) produced using the NOAA API. 
 
 #### Usage
 
@@ -11,8 +14,8 @@ The script needs an API token from NOAA. You can get a token from the [NCDC site
 * The script keeps track of the rows that have been processed. (It does so by taking row number from the output file as the start.) Thus, if halted in between, it will start with the last processed row. 
 
 #### Example
-<pre><code>python noaaweb.py samplein.csv -o sampleout.csv</code></pre>
+`python noaaweb.py samplein.csv -o sampleout.csv`
 
 #### License
-The script is under the [MIT License](https://github.com/soodoku/Weather-Data/blob/master/License.md).
+The script is under the [MIT License](../License.md).
 
