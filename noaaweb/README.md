@@ -8,7 +8,7 @@ Get data from nearest weather station given a list of zip codes and date (see [s
 * The default output file name is `output.csv`. To specify a custom output file name, pass `-o outfilename_of_choice`.
 * The script keeps track of the rows that have been processed. (It does so by taking row number from the output file as the start.) Thus, if halted in between, it will start with the last processed row. 
 
-**Example**
+**Example**  
 `python noaaweb.py samplein.csv -o sampleout.csv`
 
 #### Note 
