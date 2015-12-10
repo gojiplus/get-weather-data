@@ -61,7 +61,7 @@ def load_save_csvfile(infilename, outfilename, source='ghcnd'):
         for m in merge:
             out = out + '{:>10}'.format(m)
             
-        if len(indexes) > 0:
+        if indexes:
             out += '{:>15}'.format(min_distance)
         out += '\n'
         out = '{:<20}'.format(source) + out
