@@ -39,7 +39,7 @@ def get_content(uri, string_log=None):
     root = None
     while (True):
         time.sleep(1)
-        if string_log != None:
+        if string_log is not None:
             print string_log + uri
         resource = urllib2.urlopen(uri, timeout=500).read()
         root = ET.fromstring(resource)
@@ -62,7 +62,7 @@ def get_GHCND(zipcode, year, month, day, token):
         zipcode, year, month, day, token)
     root = get_content(uri, "GHCND uri: ")
 
-    if root.get('pageCount') != None:
+    if root.get('pageCount') is not None:
         page_count = int(root.get('pageCount'))
         data = root.findall(".//*[date='%s-%s-%sT00:00:00.000']" % (year, month, day))
         for i in range(2, page_count + 1):
