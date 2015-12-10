@@ -277,7 +277,7 @@ def updateLatLonByGeocoding(options):
         lon = r[3]
         gc = getLatLonByZip(zip)
         print("Geocoding API ('%s') ==> %s" % (zip, str(gc)))
-        if gc == None:
+        if gc is None:
             print("WARNING: No Lat/Lon data for zip: %s (Google)" % (zip))
             continue
         gm_lat = gc[0]
@@ -302,7 +302,7 @@ def sortedStationsDistance(lat, lon, stations):
         sid = s[0]
         id = s[1]
         name = s[2]
-        if s[3] == None or s[4] == None: continue
+        if s[3] is None or s[4] is None: continue
         #print s[3], s[4]
         lat2 = float(s[3])
         lon2 = float(s[4])
@@ -323,7 +323,7 @@ def updateClosestStations(options):
     
     c.execute("select max(zid) from closest")
     r = c.fetchone()
-    if r[0] == None:
+    if r[0] is None:
         last_zid = 0
     else:
         last_zid = r[0]
@@ -348,7 +348,7 @@ def updateClosestStations(options):
         else:
             gm_lat = r[4]
             gm_lon = r[5]
-        if gm_lat != None and gm_lon != None:
+        if gm_lat is not None and gm_lon is not None:
             lat1 = gm_lat
             lon1 = gm_lon
         elif lat != '' and lon != '':

@@ -131,14 +131,14 @@ def getStations(options):
 def sortStations(zipcode, r, stations):
     """Returns sorted stations list by distance
     """
-    if r == None:
+    if r is None:
         print("WARNING: zipcode = %s not found" % (zipcode))
         return None
     lat1 = r[3]
-    if lat1 == None:
+    if lat1 is None:
         lat1 = r[1]
     lon1 = r[4]
-    if lon1 == None:
+    if lon1 is None:
         lon1 = r[2]
     if lat1 == '' or lon1 == '':
         print("WARNING: not lat/lon for zipcode = %s" % (zipcode))
@@ -151,7 +151,7 @@ def sortStations(zipcode, r, stations):
         id = s[1]
         name = s[2]
         type = s[5]
-        if s[3] == None or s[4] == None: continue
+        if s[3] is None or s[4] is None: continue
         lat2 = float(s[3])
         lon2 = float(s[4])
         try:
@@ -211,7 +211,11 @@ def main(options, args):
 
     options.maxdays += 1
     
+<<<<<<< HEAD
+    if out_extended is not None and out_extended != options.extended:
+=======
     if out_extended not in [None, options.extended]:
+>>>>>>> master
         print("ERROR: Input/Output files in different format")
         sys.exit(-1)
     
@@ -263,13 +267,13 @@ def main(options, args):
             r = c.fetchone()
             if options.zip2ws:
                 dist = []
-                if r != None:
+                if r is not None:
                     c.execute("select distance, id, s.type, s.name, s.lat, s.lon from closest c join stations s on c.sid = s.rowid where c.zid = ? order by c.distance", (r[5],))
                     for r in c:
                         dist.append((int(r[0]), r[1], r[2], r[3], r[4], r[5]))
             else:
                 dist = sortStations(zipcode, r, stations)
-            if dist == None or len(dist) == 0:
+            if dist is None or len(dist) == 0:
                 writeResultRow(writer, row)
                 continue
             while True:
@@ -281,10 +285,10 @@ def main(options, args):
                 nth = 0
                 for s in dist:
                     nth += 1
-                    if options.closest != None and nth > options.closest:
+                    if options.closest is not None and nth > options.closest:
                         print("WARNING: N-th station > %d" % options.closest)
                         break
-                    if options.distance != None and (s[0] > options.distance * 1000):
+                    if options.distance is not None and (s[0] > options.distance * 1000):
                         print("WARNING: Distance > %d km" % options.distance)
                         break
                     values['nth'] = nth
@@ -414,7 +418,7 @@ if __name__ == "__main__":
         print("Please specific input file")
     else:
         options.inputfile = args[1]
-        if options.closest == None and options.distance == None:
+        if options.closest is None and options.distance is None:
             options.zip2ws = True
         main(options, args)
         
