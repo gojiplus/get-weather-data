@@ -88,7 +88,7 @@ def importZip(options):
                 c.execute("INSERT OR IGNORE INTO zip (zipcode, city, state, lat, lon, zipcodetype, locationtype, location, decommisioned, taxreturnsfiled, estimatedpopulation, totalwages) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (row[0], row[2], row[3], row[5], row[6], row[1], row[4], row[7], row[8], row[9], row[10], row[11]))
             except:
                 raise
-                print("WARNING: Cannot insert row ==> %s" % str(row))
+                print("WARNING: Cannot insert row ==> {0!s}".format(str(row)))
     conn.commit()
     conn.close()
 
@@ -119,7 +119,7 @@ def importGHCND(options):
             try:
                 c.execute("INSERT OR IGNORE INTO stations (id, name, state, lat, lon, elev, type) VALUES (?, ?, ?, ?, ?, ?, 'GHCND')", (row[0], name.decode('utf-8'), state, float(row[1]), float(row[2]), float(row[3])))
             except:
-                print("WARNING: Cannot insert row ==> %s" % str(row))
+                print("WARNING: Cannot insert row ==> {0!s}".format(str(row)))
     conn.commit()
     conn.close()
 
@@ -144,7 +144,7 @@ def importASOS(options):
             try:
                 c.execute("INSERT OR IGNORE INTO stations (id, name, state, lat, lon, elev, type) VALUES (?, ?, ?, ?, ?, ?, 'ASOS')", (id, name, state, float(lat), float(lon), float(elev)))
             except:
-                print("WARNING: Cannot insert row ==> %s" % str(l))
+                print("WARNING: Cannot insert row ==> {0!s}".format(str(l)))
     conn.commit()
     conn.close()
     
@@ -182,7 +182,7 @@ def importCOOP(options):
             try:
                 c.execute(u"INSERT OR IGNORE INTO stations (id, name, state, lat, lon, elev, type) VALUES (?, ?, ?, ?, ?, ?, 'COOP')", (id, name, state, float(lat), float(lon), float(elev)))
             except:
-                print("WARNING: Cannot insert row ==> %s" % str((name, lat, lon, elev)))
+                print("WARNING: Cannot insert row ==> {0!s}".format(str((name, lat, lon, elev))))
     conn.commit()
     conn.close()
     
@@ -239,7 +239,7 @@ def importISH(options):
             try:
                 c.execute(u"INSERT OR IGNORE INTO stations (id, name, state, lat, lon, elev, type) VALUES (?, ?, ?, ?, ?, ?, 'USAF-WBAN')", (id, name, state, lat, lon, elev))
             except:
-                print("WARNING: Cannot insert row ==> %s" % str((name, lat, lon, elev)))
+                print("WARNING: Cannot insert row ==> {0!s}".format(str((name, lat, lon, elev))))
     conn.commit()
     conn.close()
     
@@ -270,15 +270,15 @@ def updateLatLonByGeocoding(options):
     n = 0
     for r in zip:
         n = n + 1
-        print("<%d/%d>" % (n, total))
+        print("<{0:d}/{1:d}>".format(n, total))
         zid = r[0]
         zip = r[1]
         lat = r[2]
         lon = r[3]
         gc = getLatLonByZip(zip)
-        print("Geocoding API ('%s') ==> %s" % (zip, str(gc)))
+        print("Geocoding API ('{0!s}') ==> {1!s}".format(zip, str(gc)))
         if gc is None:
-            print("WARNING: No Lat/Lon data for zip: %s (Google)" % (zip))
+            print("WARNING: No Lat/Lon data for zip: {0!s} (Google)".format((zip)))
             continue
         gm_lat = gc[0]
         gm_lon = gc[1]
@@ -337,7 +337,7 @@ def updateClosestStations(options):
     for r in zip:
         n = n + 1
         #print r
-        print("<%d/%d>" % (n, total)) 
+        print("<{0:d}/{1:d}>".format(n, total)) 
         zid = r[0]
         zip = r[1]
         lat = r[2]
@@ -436,16 +436,16 @@ def exportClosestStations(options):
     # Prepare header
     headers = ['zip', 'lat', 'lon', 'gm_lat', 'gm_lon', 'diff', 'city', 'state', 'zipcodetype', 'locationtype', 'location', 'decommisioned', 'taxreturnsfiled', 'estimatedpopulation', 'totalwages']
     for i in range(max_station):
-        headers.append('st%d_id' % (i + 1))
-        headers.append('st%d_name' % (i + 1))
-        headers.append('st%d_dist' % (i + 1))
+        headers.append('st{0:d}_id'.format((i + 1)))
+        headers.append('st{0:d}_name'.format((i + 1)))
+        headers.append('st{0:d}_dist'.format((i + 1)))
     # Write header
     csvwriter.writerow(headers)
 
     c.execute("select rowid, zipcode, lat, lon, gm_lat, gm_lon, diff, city, state, zipcodetype, locationtype, location, decommisioned, taxreturnsfiled, estimatedpopulation, totalwages from zip order by rowid")
     for r in c:
         a = []
-        print("Export zip: %s" % r[1])
+        print("Export zip: {0!s}".format(r[1]))
         a += r[1:]
         c2.execute("select id, name, distance from closest c join stations s on c.sid = s.rowid where c.zid = ? order by c.distance", (r[0],))
         i = 0
@@ -466,7 +466,7 @@ def parse_command_line(argv):
     parser = optparse.OptionParser(usage=usage)
     parser.add_option("-D", "--database", action="store", 
                       dest="database", default=SQLITE_DB_NAME,
-                      help="Database name (default: %s)" % (SQLITE_DB_NAME))        
+                      help="Database name (default: {0!s})".format((SQLITE_DB_NAME)))        
     parser.add_option("-i", "--import", action="store_true", 
                       dest="importdb", default=False,
                       help="Create and import database")                             
@@ -478,13 +478,13 @@ def parse_command_line(argv):
                       help="Calculate and update closest table")    
     parser.add_option("--ghcn", action="store", 
                       type="int", dest="ghcn", default=NO_GHCN,
-                      help="Number of closest stations for GHCN (default: %d)" % (NO_GHCN))
+                      help="Number of closest stations for GHCN (default: {0:d})".format((NO_GHCN)))
     parser.add_option("--coop", action="store", 
                       type="int", dest="coop", default=NO_COOP,
-                      help="Number of closest stations for COOP (default: %d)" % (NO_COOP))
+                      help="Number of closest stations for COOP (default: {0:d})".format((NO_COOP)))
     parser.add_option("--usaf", action="store", 
                       type="int", dest="usaf", default=NO_USAF,
-                      help="Number of closest stations for USAF (default: %d)" % (NO_USAF))
+                      help="Number of closest stations for USAF (default: {0:d})".format((NO_USAF)))
     parser.add_option("-d", "--distance", action="store", 
                       type="int", dest="distance", default=0,
                       help="Maximum distance of stations from Zip location (Default: 0)")
@@ -493,7 +493,7 @@ def parse_command_line(argv):
                       help="Export closest stations for each Zip to CSV file")    
     parser.add_option("-o", "--outfile", action="store", 
                       dest="outfile", default=CSV_OUTPUT_FILE,
-                      help="CSV Output file name (default: %s)" % (CSV_OUTPUT_FILE))
+                      help="CSV Output file name (default: {0!s})".format((CSV_OUTPUT_FILE)))
     parser.add_option("--drop-closest", action="store_true", 
                       dest="drop_closest", default=False,
                       help="Drop closet table")
@@ -534,7 +534,7 @@ if __name__ == "__main__":
     sys.stdout = Logger()
     signal.signal(signal.SIGINT, signal_handler)
     
-    print("%s r3 (2013/07/07)\n" % (os.path.basename(sys.argv[0])))
+    print("{0!s} r3 (2013/07/07)\n".format((os.path.basename(sys.argv[0]))))
     (options, args) = parse_command_line(sys.argv)
     main(options, args)
     

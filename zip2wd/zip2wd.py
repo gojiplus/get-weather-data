@@ -211,11 +211,7 @@ def main(options, args):
 
     options.maxdays += 1
     
-<<<<<<< HEAD
-    if out_extended is not None and out_extended != options.extended:
-=======
     if out_extended not in [None, options.extended]:
->>>>>>> master
         print("ERROR: Input/Output files in different format")
         sys.exit(-1)
     

@@ -58,17 +58,17 @@ def get_GHCND(zipcode, year, month, day, token):
     values = {}
     result = ["" for i in range(8)]
 
-    uri = 'http://www.ncdc.noaa.gov/cdo-services/services/datasets/GHCND/locations/ZIP:%s/data?year=%s&month=%s&day=%s&_type=xml&token=%s' % (
+    uri = 'http://www.ncdc.noaa.gov/cdo-services/services/datasets/GHCND/locations/ZIP:{0!s}/data?year={1!s}&month={2!s}&day={3!s}&_type=xml&token={4!s}'.format(
         zipcode, year, month, day, token)
     root = get_content(uri, "GHCND uri: ")
 
     if root.get('pageCount') is not None:
         page_count = int(root.get('pageCount'))
-        data = root.findall(".//*[date='%s-%s-%sT00:00:00.000']" % (year, month, day))
+        data = root.findall(".//*[date='{0!s}-{1!s}-{2!s}T00:00:00.000']".format(year, month, day))
         for i in range(2, page_count + 1):
             uri2 = uri + '&page=' + str(i)
-            root = get_content(uri2, "GHCND uri (%s): " % i)
-            data.extend(root.findall(".//*[date='%s-%s-%sT00:00:00.000']" % (year, month, day)))
+            root = get_content(uri2, "GHCND uri ({0!s}): ".format(i))
+            data.extend(root.findall(".//*[date='{0!s}-{1!s}-{2!s}T00:00:00.000']".format(year, month, day)))
 
         ghcnd_id = get_station_id(data)
         if ghcnd_id != "":
@@ -88,12 +88,12 @@ def get_GHCND(zipcode, year, month, day, token):
 
 
 def get_station_information(station_id, dataset, token):
-    uri = "http://www.ncdc.noaa.gov/cdo-services/services/datasets/%s/stations/%s?token=%s&_type=xml" % (
+    uri = "http://www.ncdc.noaa.gov/cdo-services/services/datasets/{0!s}/stations/{1!s}?token={2!s}&_type=xml".format(
         dataset, station_id, token)
     # print 'station uri: ' + uri
     root = get_content(uri)
 
-    station = root.find(".//*[id='%s']" % station_id)
+    station = root.find(".//*[id='{0!s}']".format(station_id))
     dispplay_name = station.find('displayName').text
     lat = station.find('latitude').text
     long = station.find('longitude').text
@@ -121,7 +121,7 @@ def get_station_information(station_id, dataset, token):
 
 def get_PRECIP_HLY(zipcode, year, month, day, token):
     values = {}
-    uri = "http://www.ncdc.noaa.gov/cdo-services/services/datasets/PRECIP_HLY/locations/ZIP:%s/datatypes/HPCP/data?year=%s&month=%s&day=%s&token=%s&_type=xml" % (
+    uri = "http://www.ncdc.noaa.gov/cdo-services/services/datasets/PRECIP_HLY/locations/ZIP:{0!s}/datatypes/HPCP/data?year={1!s}&month={2!s}&day={3!s}&token={4!s}&_type=xml".format(
         zipcode, year, month, day, token)
     root = get_content(uri, "PRECIP_HLY uri: ")
 
@@ -131,15 +131,15 @@ def get_PRECIP_HLY(zipcode, year, month, day, token):
         data = []
         for child in root:
             date = child.find('date').text
-            if date.find('%s-%s-%sT' % (year, month, day)) != -1:
+            if date.find('{0!s}-{1!s}-{2!s}T'.format(year, month, day)) != -1:
                 data.append(child)
         for i in range(2, page_count + 1):
             uri2 = uri + '&page=' + str(i)
-            root = get_content(uri2, "PRECIP_HLY uri (%i): " % i)
+            root = get_content(uri2, "PRECIP_HLY uri ({0:d}): ".format(i))
 
             for child in root:
                 date = child.find('date').text
-                if date.find('%s-%s-%sT' % (year, month, day)) != -1:
+                if date.find('{0!s}-{1!s}-{2!s}T'.format(year, month, day)) != -1:
                     data.append(child)
 
         coop_id = get_station_id(data)
@@ -249,7 +249,7 @@ def parse_command_line(argv):
     parser = optparse.OptionParser(usage=usage)
     parser.add_option("-o", "--outfile", action="store", 
                       dest="outfile", default=CSV_OUTPUT_FILE,
-                      help="CSV Output file name (default: %s)" % (CSV_OUTPUT_FILE))
+                      help="CSV Output file name (default: {0!s})".format((CSV_OUTPUT_FILE)))
     return parser.parse_args(argv)
 
 if __name__ == "__main__":
