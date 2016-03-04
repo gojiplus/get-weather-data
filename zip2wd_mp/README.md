@@ -39,7 +39,7 @@ The script features on demand data downloads. So it pings the local directory an
 	./import-db.sh 2000
 	```
 
-	The script will download daily weather data (GHCN-Daily) from NOAA server for year 2000 and import to SQLite3 database file (`ghcn_2002.sqlite3`)
+	The script will download daily weather data (GHCN-Daily) from NOAA server for year 2000 and import to SQLite3 database file (e.g. `ghcn_2000.sqlite3`)
 
 
 #### Configuration file
