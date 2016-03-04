@@ -90,7 +90,7 @@ class WeatherByZip(object):
                     datadir = './data/ghcn-daily/all/'
                     if not os.path.exists(datadir):
                         os.makedirs(datadir)
-                    datafile = datadir + '%s.dly' % (sid)
+                    datafile = datadir + '{:s}.dly'.format(sid)
                     urlfile = ('ftp://ftp.ncdc.noaa.gov/pub/data/ghcn/daily/'
                                'all/{:s}.dly'.format(sid))
                     if not self.download_data_file(urlfile, datafile):
@@ -138,10 +138,10 @@ class WeatherByZip(object):
                                 found += 1
                                 values[element] = value
             elif stype == 'USAF-WBAN':
-                datadir = './data/gsod/%s/' % (year)
+                datadir = './data/gsod/{:s}/'.format(year)
                 if not os.path.exists(datadir):
                     os.makedirs(datadir)
-                datafile = datadir + '%s-%s.op.gz' % (sid, year)
+                datafile = datadir + '{:s}-{:s}.op.gz'.format(sid, year)
                 urlfile = ('ftp://ftp2.ncdc.noaa.gov/pub/data/gsod/'
                            '{:s}/{:s}-{:s}.op.gz'.format(year, sid, year))
                 if not self.download_data_file(urlfile, datafile):
