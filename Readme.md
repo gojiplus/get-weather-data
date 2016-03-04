@@ -21,7 +21,13 @@ If you intend to look for data from GHCND, COOP or ASOS, there are two kinds of 
 
 3. Get data from nearest weather station given a list of zip codes and date or range of dates: [Script](zip2wd/)
 
-4. Get data from nearest weather station given a list of zip codes and date using the NOAA webservice: [Script](noaaweb/)
+4. Multi-threaded version of 3. Get data from nearest weather station given a list of zip codes and date or range of dates: [Script](zip2wd_mp/)
+
+5. Get data from nearest weather station given a list of zip codes and date using the NOAA webservice: [Script](noaaweb/)
+
+#### Authors
+
+Suriyan Laohaprapanon and Gaurav Sood
 
 #### License
 
