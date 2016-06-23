@@ -46,16 +46,16 @@ def parse_command_line(argv):
                   help="Search within distance (KM)")    
     parser.add_option("-D", "--database", action="store", 
                       dest="database", default=SQLITE_DB_NAME,
-                      help="Database name (default: %s)" % (SQLITE_DB_NAME))        
+                      help="Database name (default: {0!s})".format((SQLITE_DB_NAME)))        
     parser.add_option("-o", "--outfile", action="store", 
                       dest="outfile", default=CSV_OUTPUT_FILE,
-                      help="CSV Output file name (default: %s)" % (CSV_OUTPUT_FILE))    
+                      help="CSV Output file name (default: {0!s})".format((CSV_OUTPUT_FILE)))    
     parser.add_option("-z", "--zip2ws", action="store_true", 
                   dest="zip2ws", default=False,
                   help="Search by closest table of zip2ws")    
     parser.add_option("--columns", action="store", 
                       dest="columns", default=COLUMN_NAMES_FILE,
-                      help="Column names file (default: %s)" % (COLUMN_NAMES_FILE))            
+                      help="Column names file (default: {0!s})".format((COLUMN_NAMES_FILE)))            
     return parser.parse_args(argv)
 
 not_found_list = []
@@ -63,7 +63,7 @@ def download_data_file(url, file):
     """Download weather data file from server if it not exist in local directory
     """
     if url in not_found_list:
-        print("WARNING: This URL no data on server %s" % (url))
+        print("WARNING: This URL no data on server {0!s}".format((url)))
         return False
     if not os.path.exists(file):
         retry = 0
@@ -75,17 +75,17 @@ def download_data_file(url, file):
             except Exception as e:
                 m = re.match(".*\s(\d\d\d)\s.*", str(e))
                 if m:
-                    print("WARNING: FTP server error code = %s" % (m.group(1))) 
+                    print("WARNING: FTP server error code = {0!s}".format((m.group(1)))) 
                     if m.group(1) == '550':
                         not_found_list.append(url)
                         return False
-                print("WARNING: Unknown FTP server error = %s" % str(e)) 
+                print("WARNING: Unknown FTP server error = {0!s}".format(str(e))) 
                 if retry < 5:
                     retry += 1
-                    print("Retry #%d: waiting...(%ds)" % (retry, retry * 10))
+                    print("Retry #{0:d}: waiting...({1:d}s)".format(retry, retry * 10))
                     time.sleep(retry * 10)
                 else:
-                    print("WARNING: Cannot download data from URL = %s" % url)
+                    print("WARNING: Cannot download data from URL = {0!s}".format(url))
                     return False
     return True
 
@@ -132,7 +132,7 @@ def sortStations(zipcode, r, stations):
     """Returns sorted stations list by distance
     """
     if r is None:
-        print("WARNING: zipcode = %s not found" % (zipcode))
+        print("WARNING: zipcode = {0!s} not found".format((zipcode)))
         return None
     lat1 = r[3]
     if lat1 is None:
@@ -141,7 +141,7 @@ def sortStations(zipcode, r, stations):
     if lon1 is None:
         lon1 = r[2]
     if lat1 == '' or lon1 == '':
-        print("WARNING: not lat/lon for zipcode = %s" % (zipcode))
+        print("WARNING: not lat/lon for zipcode = {0!s}".format((zipcode)))
         return None
     lat1 = float(lat1)
     lon1 = float(lon1)
@@ -164,7 +164,7 @@ def sortStations(zipcode, r, stations):
 def writeResultRow(writer, row):
     """Write result row to file
     """
-    print("result: %s\n" % str(row))
+    print("result: {0!s}\n".format(str(row)))
     writer.writerow(row)
     
 def main(options, args):
@@ -225,9 +225,9 @@ def main(options, args):
         extended_orders = [r.strip() for r in f.readlines() if r[0] != '#']
         orders.extend(extended_orders)
         if options.extended:
-            columns = ['"%s.%d"' % (r, d) for d in range(1, options.maxdays + 1) for r in orders]
+            columns = ['"{0!s}.{1:d}"'.format(r, d) for d in range(1, options.maxdays + 1) for r in orders]
         else:
-            columns = ['"%s"' % (r) for d in range(1, options.maxdays + 1) for r in orders]        
+            columns = ['"{0!s}"'.format((r)) for d in range(1, options.maxdays + 1) for r in orders]        
         headers += ',' + ','.join(columns) + '\n'
     
     if total_rows == 0:
@@ -282,10 +282,10 @@ def main(options, args):
                 for s in dist:
                     nth += 1
                     if options.closest is not None and nth > options.closest:
-                        print("WARNING: N-th station > %d" % options.closest)
+                        print("WARNING: N-th station > {0:d}".format(options.closest))
                         break
                     if options.distance is not None and (s[0] > options.distance * 1000):
-                        print("WARNING: Distance > %d km" % options.distance)
+                        print("WARNING: Distance > {0:d} km".format(options.distance))
                         break
                     values['nth'] = nth
                     sid = s[1]
@@ -301,8 +301,8 @@ def main(options, args):
                         datadir = './data/ghcn-daily/all/'
                         if not os.path.exists(datadir):
                             os.makedirs(datadir)
-                        datafile = datadir + '%s.dly' % (sid)
-                        urlfile = 'ftp://ftp.ncdc.noaa.gov/pub/data/ghcn/daily/all/%s.dly' % (sid)
+                        datafile = datadir + '{0!s}.dly'.format((sid))
+                        urlfile = 'ftp://ftp.ncdc.noaa.gov/pub/data/ghcn/daily/all/{0!s}.dly'.format((sid))
                         if not download_data_file(urlfile, datafile):
                             continue
                         search = sid + year + month
@@ -325,11 +325,11 @@ def main(options, args):
                                 elif match:
                                     break
                     elif type == 'COOP':
-                        datadir = './data/coop/3200/%s/' % (year)
+                        datadir = './data/coop/3200/{0!s}/'.format((year))
                         if not os.path.exists(datadir):
                             os.makedirs(datadir)
-                        datafile = datadir + '3200%s%s' % (MONTH_ABBR[int(month)], year)
-                        urlfile = 'ftp://ftp3.ncdc.noaa.gov/pub/data/3200/%s/3200%s%s' % (year, MONTH_ABBR[int(month)], year)
+                        datafile = datadir + '3200{0!s}{1!s}'.format(MONTH_ABBR[int(month)], year)
+                        urlfile = 'ftp://ftp3.ncdc.noaa.gov/pub/data/3200/{0!s}/3200{1!s}{2!s}'.format(year, MONTH_ABBR[int(month)], year)
                         if not download_data_file(urlfile, datafile):
                             continue
                         search = year + month
@@ -343,7 +343,7 @@ def main(options, args):
                                     while offset < len(l) - 1 and int(l[offset:offset+2]) != int(day):
                                         offset = offset + 12
                                     if offset >= len(l) - 1:
-                                        print("WARNING: data not found for day = %s" % (day))
+                                        print("WARNING: data not found for day = {0!s}".format((day)))
                                     else:
                                         offset += 4
                                         value = l[offset:offset + 6]
@@ -359,11 +359,11 @@ def main(options, args):
                                 elif match:
                                     break
                     elif type == 'USAF-WBAN':
-                        datadir = './data/gsod/%s/' % (year)
+                        datadir = './data/gsod/{0!s}/'.format((year))
                         if not os.path.exists(datadir):
                             os.makedirs(datadir)
-                        datafile = datadir + '%s-%s.op.gz' % (sid, year)
-                        urlfile = 'ftp://ftp2.ncdc.noaa.gov/pub/data/gsod/%s/%s-%s.op.gz' % (year, sid, year)
+                        datafile = datadir + '{0!s}-{1!s}.op.gz'.format(sid, year)
+                        urlfile = 'ftp://ftp2.ncdc.noaa.gov/pub/data/gsod/{0!s}/{1!s}-{2!s}.op.gz'.format(year, sid, year)
                         if not download_data_file(urlfile, datafile):
                             continue
                         search = year + month + day
