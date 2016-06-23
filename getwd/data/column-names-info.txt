@@ -1,0 +1,31 @@
+distance,distance
+AWND - Average daily wind speed (tenths of meters per second),awnd
+DAPR - Number of days included in the multiday precipitation total (MDPR),dapr
+FRGT - Top of frozen ground layer (cm),frgt
+FRTH - Thickness of frozen ground layer (cm),frth
+GAHT - Difference between river and gauge height (cm),gaht
+MDPR - Multiday precipitation total (tenths of mm. use with DAPR and DWPR. if available),mdpr
+PGTM - Peak gust time (hours and minutes i.e. HHMM),pgtm
+PRCP - Precipitation (tenths of mm),prcp
+SNOW - Snowfall (mm),snow
+SNWD - Snow depth (mm),snwd
+THIC - Thickness of ice on water (tenths of mm),thic
+TMAX - Maximum temperature (tenths of degrees C),tmax
+TMIN - Minimum temperature (tenths of degrees C),tmin
+TOBS - Temperature at the time of observation (tenths of degrees C),tobs
+WDFG - Direction of peak wind gust (degrees),wdfg
+WESD - Water equivalent of snow on the ground (tenths of mm),wesd
+WESF - Water equivalent of snowfall (tenths of mm),wesf
+WSFG - Peak guest wind speed (tenths of meters per second),wsfg
+WT01 - Fog ice fog or freezing fog (may include heavy fog),fog
+WT03 - Thunder,thunder
+WT04 - Ice pellets sleet snow pellets or small hail,ice
+WT05 - Hail (may include small hail),hail
+WT06 - Glaze or rime,glaze
+WT07 - Dust volcanic ash blowing dust blowing sand or blowing obstruction,dust
+WT08 - Smoke or haze,smoke
+WT09 - Blowing or drifting snow,snowdrift
+WT11 - High or damaging winds,highwinds
+WT14 - Drizzle,drizzle
+WT16 - Rain (may include freezing rain drizzle and freezing drizzle),prcp2
+WT18 - Snow snow pellets snow grains or ice crystals,snow2
