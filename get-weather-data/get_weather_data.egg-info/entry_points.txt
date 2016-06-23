@@ -1,0 +1,6 @@
+[console_scripts]
+noaaweb = noaaweb.noaaweb:main
+zip2wd-manager = zip2wd.manager:main
+zip2wd-worker = zip2wd.worker:main
+zip2ws = zip2ws.zip2ws:main
+
