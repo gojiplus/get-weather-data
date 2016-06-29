@@ -33,4 +33,4 @@ Suriyan Laohaprapanon and Gaurav Sood
 
 #### License
 
-Scripts are released under the [MIT License](License.md).
+Scripts are released under the [MIT License](https://opensource.org/licenses/MIT).
