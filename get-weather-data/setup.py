@@ -23,14 +23,14 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 class PostDevelopCommand(develop):
     """Post-installation for development mode."""
     def run(self):
-        print("apt-get install blablabla")
+        print("TODO:")
         develop.run(self)
 
 
 class PostInstallCommand(install):
     """Post-installation for installation mode."""
     def run(self):
-        system("zip2wd-worker")
+        print("TODO:")
         install.run(self)
 
 
@@ -40,7 +40,7 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='0.1.21',
+    version='0.1.24',
 
     description='Scripts for finding out the weather in a particular zip code',
     long_description=long_description,

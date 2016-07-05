@@ -1,3 +1,0 @@
-noaaweb
-zip2wd
-zip2ws
