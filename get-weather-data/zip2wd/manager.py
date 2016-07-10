@@ -16,7 +16,8 @@ from zip2wd import STATION_INFO_COLS
 
 from pkg_resources import resource_filename
 
-DEFAULT_CONFIG_FILE = resource_filename(__name__, 'zip2wd.cfg')
+CONFIG_FILE_NAME = 'zip2wd.cfg'
+DEFAULT_CONFIG_FILE = resource_filename(__name__, CONFIG_FILE_NAME)
 DEF_OUTPUT_FILE = 'output.csv'
 LOG_FILE = 'zip2wd_manager.log'
 
@@ -64,7 +65,10 @@ def load_config(args=None):
     if args is None or isinstance(args, basestring):
         namespace = argparse.Namespace()
         if args is None:
-            namespace.config = DEFAULT_CONFIG_FILE
+            if os.path.exists(CONFIG_FILE_NAME):
+                namespace.config = CONFIG_FILE_NAME
+            else:
+                namespace.config = DEFAULT_CONFIG_FILE
         else:
             namespace.config = args
         args = namespace

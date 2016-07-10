@@ -14,8 +14,11 @@ from zip2wd import WeatherByZip
 
 from pkg_resources import resource_filename
 
-DEFAULT_CONFIG_FILE = resource_filename(__name__, 'zip2wd.cfg')
+CONFIG_FILE_NAME = 'zip2wd.cfg'
+DEFAULT_CONFIG_FILE = resource_filename(__name__, CONFIG_FILE_NAME)
 LOG_FILE = 'zip2wd_worker.log'
+
+DEFAULT_ZIP2WS_DB_FILE = resource_filename('zip2ws', 'data/zip2ws.sqlite')
 
 
 def setup_logger(debug):
@@ -56,7 +59,10 @@ def load_config(args=None):
     if args is None or isinstance(args, basestring):
         namespace = argparse.Namespace()
         if args is None:
-            namespace.config = DEFAULT_CONFIG_FILE
+            if os.path.exists(CONFIG_FILE_NAME):
+                namespace.config = CONFIG_FILE_NAME
+            else:
+                namespace.config = DEFAULT_CONFIG_FILE
         else:
             namespace.config = args
         args = namespace
@@ -75,7 +81,12 @@ def load_config(args=None):
         args.distance = config.getint('worker', 'distance')
 
         args.dbpath = config.get('db', 'path')
-        args.zip2ws_db = os.path.join(args.dbpath, config.get('db', 'zip2ws'))
+        path = os.path.join(args.dbpath, config.get('db', 'zip2ws'))
+        if not os.path.exists(path):
+            logging.warn("ZIP2WS database '{:s}' is not exists".format(path))
+            path = DEFAULT_ZIP2WS_DB_FILE
+            logging.warn("Using default from '{:s}'".format(path))
+        args.zip2ws_db = path
     except Exception as e:
         logging.error(str(e))
 
@@ -108,9 +119,8 @@ def mp_zip2wd(shared_job_q, shared_result_q, args):
     """
     procs = []
     for i in range(args.processes):
-        p = multiprocessing.Process(
-                target=zip2wd_worker,
-                args=(shared_job_q, shared_result_q, args))
+        p = multiprocessing.Process(target=zip2wd_worker,
+                                    args=(shared_job_q, shared_result_q, args))
         procs.append(p)
         p.start()
 
