@@ -495,7 +495,7 @@ def parse_command_line(argv):
     """Command line options parser for the script
     """
     usage = "usage: %prog [options]"
-            
+
     parser = optparse.OptionParser(usage=usage)
     parser.add_option("-D", "--database", action="store", 
                       dest="database", default=SQLITE_DB_NAME,
@@ -543,7 +543,7 @@ def download(url, local):
     print("Downloading '{:s}'...".format(url))
     response = urlopen(url)
     content = response.read()
-    with open(local, 'w') as f:
+    with open(local, 'wb') as f:
         f.write(content)
 
 
