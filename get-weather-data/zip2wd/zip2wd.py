@@ -10,9 +10,17 @@ import sqlite3
 import sys
 import gzip
 import logging
+import csv
 
 from datetime import datetime, timedelta
 from pkg_resources import resource_filename
+
+# Python 2 and 3
+try:
+    from urllib.request import urlopen
+    from urllib.error import HTTPError
+except ImportError:
+    from urllib2 import urlopen, HTTPError
 
 
 """Constants
@@ -30,6 +38,65 @@ USAF_WBAN_DATA = [('TEMP', 24, 30), ('DEWP', 35, 41), ('SLP', 46, 52),
                   ('MAXF', 108, 109), ('TMIN', 110, 116), ('MINF', 116, 117),
                   ('PRCP', 118, 123), ('PRCPF', 123, 124), ('SNWD', 125, 130),
                   ('FRSHTT', 132, 138)]
+
+
+def download(url, local):
+    print("Downloading '{:s}'...".format(url))
+    start = time.time()
+    response = urlopen(url)
+    content = response.read()
+    with open(local, 'wb') as f:
+        f.write(content)
+    elapse = time.time() - start
+    print("Elapse time: {:f} seconds".format(elapse))
+
+
+def build_ghcn_database(args, year, dbpath):
+    conn = None
+    try:
+        local = os.path.join(args.dbpath, "{:s}.csv.gz".format(year))
+        if not os.path.exists(local):
+            url = "ftp://ftp.ncdc.noaa.gov/pub/data/ghcn/daily/by_year/{:s}.csv.gz".format(year)
+            download(url, local)
+        conn = sqlite3.connect(dbpath)
+        c = conn.cursor()
+        c.execute("""CREATE TABLE IF NOT EXISTS `ghcn_{:s}` (
+`id` VARCHAR(12) NOT NULL,
+`date` VARCHAR(8) NOT NULL,
+`element` VARCHAR(4) NULL,
+`value` VARCHAR(6) NULL,
+`m_flag` VARCHAR(1) NULL,
+`q_flag` VARCHAR(1) NULL,
+`s_flag` VARCHAR(1) NULL,
+`obs_time` VARCHAR(4) NULL)""".format(year))
+
+        c.execute("""create index if not exists idx_id_time
+on ghcn_{:s} (id, date)""".format(year))
+
+        c.execute("PRAGMA journal_mode = OFF")
+        c.execute("PRAGMA synchronous = OFF")
+        # Fastest way if no memory limit
+        #c.execute("PRAGMA temp_store = MEMORY")
+        # Taking about 1GB memory (N * 1024)
+        c.execute("PRAGMA cache_size = 1000000")
+        print("Importing...")
+        start = time.time()
+        with gzip.open(local, 'rb') as f:
+            reader = csv.reader(f)
+            c.executemany(u"INSERT OR IGNORE INTO ghcn_{:s} (id, date, element, value, m_flag, q_flag, s_flag, obs_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?)".format(year), reader)
+        elapse = time.time() - start
+        print("Import time: {:f} seconds".format(elapse))
+    except Exception as e:
+        logging.error(str(e))
+        raise
+    finally:
+        if conn:
+            print("Commiting...")
+            start = time.time()
+            conn.commit()
+            conn.close()
+            elapse = time.time() - start
+            print("Commit time: {:f} seconds".format(elapse))
 
 
 class WeatherByZip(object):
@@ -130,6 +197,8 @@ class WeatherByZip(object):
                         current_year = year
                         dbname = os.path.join(self.args.dbpath,
                                               "ghcn_{:s}.sqlite3".format(year))
+                        if not os.path.exists(dbname):
+                            build_ghcn_database(self.args, year, dbname)
                         conn2 = sqlite3.connect(dbname)
                         c2 = conn2.cursor()
                         # FIXME: try to optimize with these options
