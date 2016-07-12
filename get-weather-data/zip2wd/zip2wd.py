@@ -51,14 +51,16 @@ def download(url, local):
     print("Elapse time: {:f} seconds".format(elapse))
 
 
-def build_ghcn_database(args, year, dbpath):
+def build_ghcn_database(args, year, dbname):
     conn = None
     try:
         local = os.path.join(args.dbpath, "{:s}.csv.gz".format(year))
         if not os.path.exists(local):
+            if not os.path.exists(args.dbpath):
+                os.makedirs(args.dbpath)
             url = "ftp://ftp.ncdc.noaa.gov/pub/data/ghcn/daily/by_year/{:s}.csv.gz".format(year)
             download(url, local)
-        conn = sqlite3.connect(dbpath)
+        conn = sqlite3.connect(dbname)
         c = conn.cursor()
         c.execute("""CREATE TABLE IF NOT EXISTS `ghcn_{:s}` (
 `id` VARCHAR(12) NOT NULL,
