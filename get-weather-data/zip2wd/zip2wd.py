@@ -85,7 +85,9 @@ on ghcn_{:s} (id, date)""".format(year))
         start = time.time()
         with gzip.open(local, 'rb') as f:
             reader = csv.reader(f)
-            c.executemany(u"INSERT OR IGNORE INTO ghcn_{:s} (id, date, element, value, m_flag, q_flag, s_flag, obs_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?)".format(year), reader)
+            c.executemany("""INSERT OR IGNORE INTO ghcn_{:s}
+(id, date, element, value, m_flag, q_flag, s_flag, obs_time)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)""".format(year), reader)
         elapse = time.time() - start
         print("Import time: {:f} seconds".format(elapse))
     except Exception as e:
@@ -177,11 +179,11 @@ class WeatherByZip(object):
                         for l in df:
                             if (l[:17] == search):
                                 element = l[17:21]
-                                offset = 21 + int(day)*8 - 8
+                                offset = 21 + int(day) * 8 - 8
                                 value = l[offset:offset + 5]
-                                mflag = l[offset+5:offset + 6]
-                                qflag = l[offset+6:offset + 7]
-                                sflag = l[offset+7:offset + 8]
+                                mflag = l[offset + 5:offset + 6]
+                                qflag = l[offset + 6:offset + 7]
+                                sflag = l[offset + 7:offset + 8]
                                 logging.debug("<{:s}> <{:s}> <{:s}> <{:s}>"
                                               " <{:s}>".format(element, value,
                                                                mflag, qflag,
@@ -234,10 +236,10 @@ class WeatherByZip(object):
                                 value = l[d[1]:d[2]]
                                 if element in ['TMAX', 'TMIN']:
                                     if value != '9999.9':
-                                        value = self.f2c(float(value))*10
+                                        value = self.f2c(float(value)) * 10
                                 elif element in ['AWND']:
                                     if value != '999.9':
-                                        value = self.kn2ms(float(value))*10
+                                        value = self.kn2ms(float(value)) * 10
                                 if (not values.get(element) and
                                    (element in orders)):
                                     found += 1
@@ -254,7 +256,7 @@ class WeatherByZip(object):
         return values
 
     def search(self, search):
-        zipcode = '0'*(5 - len(search['zip'])) + search['zip']
+        zipcode = '0' * (5 - len(search['zip'])) + search['zip']
 
         logging.info("Search for: '{:s}'".format(zipcode))
 
