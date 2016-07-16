@@ -23,14 +23,14 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 class PostDevelopCommand(develop):
     """Post-installation for development mode."""
     def run(self):
-        print("TODO:")
+        print("TODO: PostDevelopCommand")
         develop.run(self)
 
 
 class PostInstallCommand(install):
     """Post-installation for installation mode."""
     def run(self):
-        print("TODO:")
+        print("TODO: PostInstallCommand")
         install.run(self)
 
 
@@ -40,13 +40,13 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='0.1.24',
+    version='0.1.29',
 
     description='Scripts for finding out the weather in a particular zip code',
     long_description=long_description,
 
     # The project's main homepage.
-    url='https://github.com/suriyan/get-weather-data',
+    url='https://github.com/soodoku/get-weather-data',
 
     # Author details
     author='Suriyan Laohaprapanon, Gaurav Sood',
@@ -108,7 +108,7 @@ setup(
     # have to be included in MANIFEST.in as well.
     package_data={
         'noaaweb': ['README.md', '*.csv'],
-        'zip2ws': ['readme.md', 'inventories/*', 'data/*'],
+        'zip2ws': ['readme.md', 'data/dummy.txt'],
         'zip2wd': ['*.txt', '*.csv', 'zip2wd.cfg', 'README.md', 'data/*.sh'],
     },
 
