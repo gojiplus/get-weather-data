@@ -1,5 +1,8 @@
 Get Weather Data
 ~~~~~~~~~~~~~~~~
+.. image:: https://travis-ci.org/soodoku/get-weather-data.svg?branch=master   :target: 
+.. image:: https://img.shields.io/pypi/v/get-weather-data.svg?maxAge=2592000   :target: 
+.. image:: https://img.shields.io/pypi/dd/get-weather-data.svg?maxAge=2592000   :target: 
 
 Scripts for finding out the weather in a particular zip code on a
 particular day (or a set of dates). You can also find weather stations
@@ -256,8 +259,6 @@ Example
     ::
     
         zip2wd-worker
-    
-
 
 Authors
 ^^^^^^^
