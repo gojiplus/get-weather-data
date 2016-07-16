@@ -11,6 +11,10 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
+   noaaweb
+   zip2ws
+   zip2wd
+
 
 
 Indices and tables
