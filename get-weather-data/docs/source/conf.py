@@ -29,7 +29,7 @@
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = []
+extensions = ['sphinx.ext.todo', 'sphinx.ext.autodoc']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -48,7 +48,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'get-weather-data'
+project = u'Get Weather Data'
 copyright = u'2016, Suriyan Laohaprapanon, Gaurav Sood'
 author = u'Suriyan Laohaprapanon, Gaurav Sood'
 
@@ -119,7 +119,7 @@ todo_include_todos = False
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'alabaster'
+html_theme = 'default'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -259,7 +259,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'get-weather-data.tex', u'get-weather-data Documentation',
+    (master_doc, 'get-weather-data.tex', u'Get Weather Data Documentation',
      u'Suriyan Laohaprapanon, Gaurav Sood', 'manual'),
 ]
 
@@ -301,7 +301,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'get-weather-data', u'get-weather-data Documentation',
+    (master_doc, 'get-weather-data', u'Get Weather Data Documentation',
      [author], 1)
 ]
 
@@ -316,7 +316,7 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'get-weather-data', u'get-weather-data Documentation',
+    (master_doc, 'get-weather-data', u'Get Weather Data Documentation',
      author, 'get-weather-data', 'One line description of project.',
      'Miscellaneous'),
 ]
