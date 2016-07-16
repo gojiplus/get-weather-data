@@ -1,5 +1,7 @@
 ### Get Weather Data
 
+[![Build Status](https://travis-ci.org/soodoku/get-weather-data.svg?branch=master)](https://travis-ci.org/soodoku/get-weather-data)
+
 Scripts for finding out the weather in a particular zip code on a particular day (or a set of dates). You can also find weather stations near a zip code, and vice-versa. 
 
 #### Background
@@ -31,4 +33,4 @@ Suriyan Laohaprapanon and Gaurav Sood
 
 #### License
 
-Scripts are released under the [MIT License](License.md).
+Scripts are released under the [MIT License](https://opensource.org/licenses/MIT).
