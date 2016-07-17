@@ -12,9 +12,11 @@ import urllib2
 
 import time
 import xml.etree.ElementTree as ET
+import os
 
 CSV_OUTPUT_FILE     = 'output.csv'
-NCDC_TOKEN          = 'YcnZInRPxWnyyDEvysQNaTHrtgMEMHZD'
+NCDC_TOKEN          = os.environ.get('NCDC_TOKEN', None)
+
 
 def get_station_id(data):
     stations = {}
@@ -253,14 +255,14 @@ def parse_command_line(argv):
     return parser.parse_args(argv)
 
 
-def main():
-    (options, args) = parse_command_line(sys.argv)
+def main(argv=sys.argv):
+    (options, args) = parse_command_line(argv)
     if len(args) < 2:
         print("Please specific input file")
+        sys.exit(-1)
     else:
         options.inputfile = args[1]
         load_save_csvfile(options.inputfile, options.outfile)
-
 
 if __name__ == "__main__":
     main()
