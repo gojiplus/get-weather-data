@@ -8,13 +8,20 @@ Replace token_here with the token you get
 import sys
 import optparse
 import csv
-import urllib2
+try:
+    # For Python 3.0 and later
+    from urllib.request import urlopen, HTTPError
+except ImportError:
+    # Fall back to Python 2's urllib2
+    from urllib2 import urlopen, HTTPError
 
 import time
 import xml.etree.ElementTree as ET
+import os
 
 CSV_OUTPUT_FILE     = 'output.csv'
-NCDC_TOKEN          = 'YcnZInRPxWnyyDEvysQNaTHrtgMEMHZD'
+NCDC_TOKEN          = os.environ.get('NCDC_TOKEN', None)
+
 
 def get_station_id(data):
     stations = {}
@@ -27,11 +34,11 @@ def get_station_id(data):
 
     max = 0
     station_id = ""
-    for k, v in stations.iteritems():
+    for k, v in stations.items():
         if max < v:
             max = v
             station_id = k
-    print "stations: " + str(stations) + " ---> use station: " + station_id
+    print("stations: " + str(stations) + " ---> use station: " + station_id)
     return station_id
 
 
@@ -40,12 +47,12 @@ def get_content(uri, string_log=None):
     while (True):
         time.sleep(1)
         if string_log is not None:
-            print string_log + uri
-        resource = urllib2.urlopen(uri, timeout=500).read()
+            print(string_log + uri)
+        resource = urlopen(uri, timeout=500).read()
         root = ET.fromstring(resource)
         if root.tag == 'cdoError':
             time.sleep(5)
-            print "name: " + root.find('name') + ", message: " + root.find('message')
+            print("name: " + root.find('name') + ", message: " + root.find('message'))
         else:
             break
     return root
@@ -76,10 +83,10 @@ def get_GHCND(zipcode, year, month, day, token):
                 if ghcnd_id == d.find('station').text:
                     values[d.find('dataType').text] = d.find('value').text
 
-            print "values: " + str(values)
+            print("values: " + str(values))
             result = get_station_information(ghcnd_id, 'GHCND', token)
         else:
-            print "No station GHCND"
+            print("No station GHCND")
 
     for o in orders:
         result.append(values.get(o, ""))
@@ -146,13 +153,13 @@ def get_PRECIP_HLY(zipcode, year, month, day, token):
         if coop_id != "":
             for d in data:
                 if coop_id == d.find('station').text:
-                    print d.find('date').text, d.find('value').text
+                    print(d.find('date').text, d.find('value').text)
                     values[int(d.find('date').text[11:13])] = d.find('value').text
 
-            print "values: " + str(values)
+            print("values: " + str(values))
             result = get_station_information(coop_id, 'PRECIP_HLY', token)
         else:
-            print "PRECIP_HLY No station"
+            print("PRECIP_HLY No station")
 
     for o in range(0, 24):
         result.append(values.get(o, ""))
@@ -195,7 +202,10 @@ def load_save_csvfile(infilename, outfilename):
         output.write(start_line)
         output.close()
         total_rows = 1
-    output = open(outfilename, 'ab', 1)
+    if sys.version_info >= (3, 0, 0):
+        output = open(outfilename, 'a', 1, newline='')
+    else:
+        output = open(outfilename, 'ab', 1)
 
     writer = csv.writer(output, quoting=csv.QUOTE_ALL)
 
@@ -213,26 +223,26 @@ def load_save_csvfile(infilename, outfilename):
             month = row[4]
             day = row[5]
 
-            print "row: " + str(row)
+            print("row: " + str(row))
            
             row1 = row
             try:
                 row.extend(get_GHCND(zipcode, year, month, day, token))
                 row.extend(get_PRECIP_HLY(zipcode, year, month, day, token))
-            except urllib2.HTTPError as e:
-                print e.reason
-                print 'Wait 5 minutes to continue'
+            except HTTPError as e:
+                print(e.reason)
+                print('Wait 5 minutes to continue')
                 row = row1
                 time.sleep(5 * 60)
                 try:
                     row.extend(get_GHCND(zipcode, year, month, day, token))
                     row.extend(get_PRECIP_HLY(zipcode, year, month, day, token))
-                except urllib2.HTTPError as e1:
-                    print e1.reason
-                    print 'Exit!!! Wait few hours to continue again'
+                except HTTPError as e1:
+                    print(e1.reason)
+                    print('Exit!!! Wait few hours to continue again')
                     break
-            print "result: " + str(row)
-            print ""
+            print("result: " + str(row))
+            print("")
             writer.writerow(row)
             time.sleep(2)
 
@@ -252,13 +262,18 @@ def parse_command_line(argv):
                       help="CSV Output file name (default: {0!s})".format((CSV_OUTPUT_FILE)))
     return parser.parse_args(argv)
 
-if __name__ == "__main__":
-    (options, args) = parse_command_line(sys.argv)
+
+def main(argv=sys.argv):
+    (options, args) = parse_command_line(argv)
     if len(args) < 2:
         print("Please specific input file")
+        sys.exit(-1)
     else:
         options.inputfile = args[1]
         load_save_csvfile(options.inputfile, options.outfile)
+
+if __name__ == "__main__":
+    main()
 
 #load_save_csvfile(samplein.csv', 'sampleout1.csv')
 # <cdoError>

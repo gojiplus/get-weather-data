@@ -1,4 +1,4 @@
-### zip2wd: Get Weather Data For a List of Zip Codes For a Range of Dates
+### zip2wd_mp: Get Weather Data For a List of Zip Codes For a Range of Dates (Multi-processing version)
 
 Given a zip code and a date or a range of dates, it gets weather data (you get to specify which data) from the closest weather station from which the data are available. If given a range of dates, it fetches all the specified columns for each of the days in the intervening p period.
 
@@ -14,7 +14,6 @@ The script features on demand data downloads. So it pings the local directory an
 #### Prerequisites:
 
 1. [zip2ws.sqlite](zip2ws.sqlite) is based off finding the nearest weather station project.  
-   This sqlite database can be updated using this script as well. 
   
 2. Input File Types:  
 	a. Basic: The input file format should be CSV and should contain 6 columns with following columns names:   
@@ -31,41 +30,108 @@ The script features on demand data downloads. So it pings the local directory an
 
 	For what these column names stand for, see [column-names-info.txt](column-names-info.txt)
 
-#### Usage
+4. GHCN Weather Data in SQLite3 database: These files create by a script [import-db.sh](data/import-db.sh) for each year.
+
+	e.g. for year 2000
+
+	```
+	cd data
+	./import-db.sh 2000
+	```
+
+	The script will download daily weather data (GHCN-Daily) from NOAA server for year 2000 and import to SQLite3 database file (e.g. `ghcn_2000.sqlite3`)
+
+
+#### Configuration file
+
+There are script settings in the configuration. [zip2wd.cfg](zip2wd.cfg)
+
 ```
-zip2wd.py [options] <input file>
+[manager]
+ip = 127.0.0.1
+port = 9999
+authkey = 1234
+batch_size = 10
 
-Options:
+[worker]
+uses_sqlite = yes
+processes = 4
+nth = 0
+distance = 30
+
+[output]
+columns = column-names.txt
+
+[db]
+zip2ws = zip2ws.sqlite
+path = ./data/
+```
+
+* `ip` and `port` - IP address and port of manager process that the worker will be connect to.
+* `authkey` - A shared password which is used to authenticate between manager and worker processes.
+* `batch_size` - A number of zipcodes that manager process dispatch to worker process each time.
+
+* `uses_sqlite` - Uses weather data from imported SQLite3 database if `yes` (recommend for speed) or download weather data for individual weather station on demand if `no`
+* `processes` - A number of process will be forked on the worker process.
+* `nth` - Search within n-th closest station [set to `0` for unlimited]
+* `distance` - Search within distance (KM) [set to `0` for unlimited]
+
+* `column` - A column file that contains list of weather data column to be output
+
+* `zip2ws` - SQLite3 database of zip codes and weather stations
+* `path` - Path relative to database files
+
+#### Usage
+
+##### Manager process
+```
+usage: manager.py [-h] [--config CONFIG] [-o OUTFILE] [-v] inputs [inputs ...]
+
+Weather search by ZIP (Manager)
+
+positional arguments:
+  inputs                CSV input file(s) name
+
+optional arguments:
   -h, --help            show this help message and exit
-  -c CLOSEST, --closest=CLOSEST
-                        Search within n-th closest station
-  -d DISTANCE, --distance=DISTANCE
-                        Search within distance (KM)
-  -D DATABASE, --database=DATABASE
-                        Database name (default: zip2ws.sqlite)
-  -o OUTFILE, --outfile=OUTFILE
-                        CSV Output file name (default: output.csv)
-  -z, --zip2ws          Search by closest table of zip2ws
-  --columns=COLUMNS     Column names file (default: column-names.txt)
+  --config CONFIG       Default configuration file (default: zip2wd.cfg)
+  -o OUTFILE, --out OUTFILE
+                        Search results in CSV (default: output.csv)
+  -v, --verbose         Verbose message
+```
 
+##### Worker process
+```
+usage: worker.py [-h] [--config CONFIG] [-v]
+
+Weather search by ZIP (Worker)
+
+optional arguments:
+  -h, --help       show this help message and exit
+  --config CONFIG  Default configuration file (default: zip2wd.cfg)
+  -v, --verbose    Verbose message
 ```
 
 #### Example:
 
-1. Search weather data from 5 closest stations  
-    ```python zip2wd.py -c 5 naes00r.csv```
+1. Run manager process search weather data for the input file [sample-input-extend.csv](sample-input-extend.csv)
 
-2. Search weather data from closest stations within 30km  
-    ```python zip2wd.py -d 30 naes00r.csv```
+	```
+	python manager.py sample-input-extend.csv
+	```
 
-3. Search weather data using pre-calculated zip stations list from closest table  
-    ```python zip2wd.py -z naes00r.csv```
+	The default output file is `output.csv`
 
-4. **Note:**  Pre-calculated zip-stations list can be updated by zip2ws script for example   
-    ```python zip2ws.py -c --ghcn=0 --coop=0 --usaf=10```
-   
-   The above command calculates and updates the closest table with 10 closest USAF-WBAN station type    
-   
+2. Run worker process
+
+	```
+	python worker.py
+	```
+
+	The manager will dispatch job (list of zip codes and date range) to the connected workers. The worker process also forks a number of process (specify by `processes` in the configuration file) to search the weather data for each zip code and put back the results to the manager process.
+
+	We can have multiple workers run on same or difference machine.
+
 #### Output
 For each day you get weather columns that you mention in column-names  
 See column-names-info for details  

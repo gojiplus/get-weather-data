@@ -12,19 +12,34 @@ import csv
 import pygeocoder
 from pygeocoder import Geocoder
 
+# Python 2 and 3
+try:
+    from urllib.request import urlopen
+    from urllib.error import HTTPError
+except ImportError:
+    from urllib2 import urlopen, HTTPError
+
+from pkg_resources import resource_filename
+
 """Script default configuration
 """
-SQLITE_DB_NAME      =   "zip2ws.sqlite"
-US_ZIP_LIST         =   "./inventories/free-zipcode-database-primary.csv"
-GHCND_STATIONS_LIST =   "./inventories/ghcnd-stations.txt"
-ASOS_STATIONS_LIST  =   "./inventories/asos-stations.txt"
-COOP_STATIONS_LIST  =   "./inventories/coop-act.txt"
-ISH_STATIONS_LIST   =   "./inventories/ish-history.csv"
-CSV_OUTPUT_FILE     =   "zip-stations.csv"
+FREE_ZIPCODE_DOWNLOAD_URL = "http://federalgovernmentzipcodes.us/free-zipcode-database-Primary.csv"
+GHCND_STATIONS_LIST_URL   = "http://www1.ncdc.noaa.gov/pub/data/ghcn/daily/ghcnd-stations.txt"
+ISD_STATIONS_LIST_URL     = "ftp://ftp.ncdc.noaa.gov/pub/data/noaa/isd-history.csv"
+
+US_ZIP_LIST         =   resource_filename(__name__, "data/free-zipcode-database-primary.csv")
+GHCND_STATIONS_LIST =   resource_filename(__name__, "data/ghcnd-stations.txt")
+ASOS_STATIONS_LIST  =   resource_filename(__name__, "inventories/asos-stations.txt")
+COOP_STATIONS_LIST  =   resource_filename(__name__, "inventories/coop-act.txt")
+ISD_STATIONS_LIST   =   resource_filename(__name__, "data/isd-history.csv")
+
+SQLITE_DB_NAME      =   resource_filename(__name__, "data/zip2ws.sqlite")
+CSV_OUTPUT_FILE     =   resource_filename(__name__, "data/zip-stations.csv")
 NO_GHCN             =   3
-NO_COOP             =   1
-NO_USAF             =   1
+NO_COOP             =   0
+NO_USAF             =   2
 LOGFILE             = 'zip2ws.log'
+
 
 class Logger(object):
     """Standard output wrapper class
@@ -37,21 +52,25 @@ class Logger(object):
         self.terminal.write(message)
         self.log.write(message)
 
+
 """Constants
 """
 nauticalMilePerLat = 60.00721
 nauticalMilePerLongitude = 60.10793
 rad = math.pi / 180.0
-metersPerNauticalMile = 1852    
+metersPerNauticalMile = 1852
+
+
 def metersGeoDistance(lat1, lon1, lat2, lon2):
     """Returns calculate distance between two lat lons in meters
     """
     yDistance = (lat2 - lat1) * nauticalMilePerLat
     xDistance = (math.cos(lat1 * rad) + math.cos(lat2 * rad)) * (lon2 - lon1) * (nauticalMilePerLongitude / 2)
 
-    distance = math.sqrt( yDistance**2 + xDistance**2 )
+    distance = math.sqrt(yDistance**2 + xDistance**2)
 
     return distance * metersPerNauticalMile
+
 
 def getLatLonByZip(zip):
     """Returns Lat/Lon by Zip (Using Google Maps Geocoding API)
@@ -62,11 +81,12 @@ def getLatLonByZip(zip):
         results = Geocoder.geocode(zip)
         return results[0].coordinates
     except Exception as e:
-        print e.status
+        print(e.status)
         if e.status != pygeocoder.GeocoderError.G_GEO_ZERO_RESULTS:
             # Raise except if OVER_USAGE_LIMIT
             raise
         return None
+
 
 def importZip(options):
     """Create and import Zip code to database table
@@ -79,7 +99,7 @@ def importZip(options):
     except:
         raise
         print("WARNING: Table zip already created")
-        
+
     with open(US_ZIP_LIST, 'rb') as f:
         reader = csv.reader(f)
         reader.next()
@@ -92,6 +112,7 @@ def importZip(options):
     conn.commit()
     conn.close()
 
+
 def createStationsTable(c):
     """Create table "stations"
     """
@@ -99,8 +120,9 @@ def createStationsTable(c):
         c.execute('''CREATE TABLE stations
                      (id varchar(32) unique, name varchar(64), state varchar(4), lat real, lon real, elev real, type varchar(16))''')
     except:
-        print("WARNING: Table stations already created")    
-    
+        print("WARNING: Table stations already created")
+
+
 def importGHCND(options):
     """Import GHCND stations list for database table
     """
@@ -108,7 +130,7 @@ def importGHCND(options):
     c = conn.cursor()
 
     createStationsTable(c)
-    
+
     with open(GHCND_STATIONS_LIST) as f:
         for l in f:
             if l[0:2].upper() != 'US': continue
@@ -123,6 +145,7 @@ def importGHCND(options):
     conn.commit()
     conn.close()
 
+
 def importASOS(options):
     """Import ASOS stations list for database table
     """
@@ -130,7 +153,7 @@ def importASOS(options):
     c = conn.cursor()
 
     createStationsTable(c)
-    
+
     with open(ASOS_STATIONS_LIST) as f:
         for l in f:
             country = l[89:109].strip()
@@ -147,15 +170,16 @@ def importASOS(options):
                 print("WARNING: Cannot insert row ==> {0!s}".format(str(l)))
     conn.commit()
     conn.close()
-    
+
+
 def importCOOP(options):
     """Import COOP stations list for database table
     """
     conn = sqlite3.connect(options.database)
     c = conn.cursor()
-    
+
     createStationsTable(c)
-    
+
     with open(COOP_STATIONS_LIST) as f:
         for l in f:
             country = l[38:58].strip()
@@ -185,10 +209,11 @@ def importCOOP(options):
                 print("WARNING: Cannot insert row ==> {0!s}".format(str((name, lat, lon, elev))))
     conn.commit()
     conn.close()
-    
-def importISH(options):
-    """Import ISH stations list for database table
-    
+
+
+def importISD(options):
+    """Import ISD stations list for database table
+
     Integrated Surface Database Station History, June 2013
 
     USAF = Air Force Datsav3 station number
@@ -211,10 +236,10 @@ def importISH(options):
     """
     conn = sqlite3.connect(options.database)
     c = conn.cursor()
-    
+
     createStationsTable(c)
-    
-    with open(ISH_STATIONS_LIST) as f:
+
+    with open(ISD_STATIONS_LIST) as f:
         reader = csv.reader(f)
         reader.next()
         for r in reader:
@@ -234,7 +259,7 @@ def importISH(options):
             try:
                 elev = float(r[9])/10.0
             except:
-                elev = None                
+                elev = None
             #print name, lat, lon, elev
             try:
                 c.execute(u"INSERT OR IGNORE INTO stations (id, name, state, lat, lon, elev, type) VALUES (?, ?, ?, ?, ?, ?, 'USAF-WBAN')", (id, name, state, lat, lon, elev))
@@ -242,7 +267,8 @@ def importISH(options):
                 print("WARNING: Cannot insert row ==> {0!s}".format(str((name, lat, lon, elev))))
     conn.commit()
     conn.close()
-    
+
+
 def getStations(options, type):
     """Query stations by specific type ('GHCND', 'ASOS', 'COOP', 'USAF-WBAN')
     """
@@ -257,6 +283,7 @@ def getStations(options, type):
         stations.append(r)
     conn.close()
     return stations
+
 
 def updateLatLonByGeocoding(options):
     conn = sqlite3.connect(options.database)
@@ -293,7 +320,8 @@ def updateLatLonByGeocoding(options):
         conn.commit()
     conn.commit()
     conn.close()
-    
+
+
 def sortedStationsDistance(lat, lon, stations):
     """Returns stations list sorted by distance from specific lat/log
     """
@@ -312,15 +340,16 @@ def sortedStationsDistance(lat, lon, stations):
             distance = sys.maxint
         dist.append((int(distance), sid))
     return sorted(dist)
-    
+
+
 def updateClosestStations(options):
     """Find closest weather station and update to table 'closest'
     """
     conn = sqlite3.connect(options.database)
     c = conn.cursor()
-    
+
     createClosestTable(c)
-    
+
     c.execute("select max(zid) from closest")
     r = c.fetchone()
     if r[0] is None:
@@ -362,7 +391,7 @@ def updateClosestStations(options):
             for d in dist:
                 if d[0] <= options.distance * 1000:
                     #print d
-                    c.execute("INSERT OR IGNORE INTO closest (zid, sid, distance) VALUES (?, ?, ?)", (zid, d[1], d[0]))                    
+                    c.execute("INSERT OR IGNORE INTO closest (zid, sid, distance) VALUES (?, ?, ?)", (zid, d[1], d[0]))
                 else:
                     break
         else: 
@@ -370,11 +399,11 @@ def updateClosestStations(options):
                 stations = getStations(options, a)
                 dist = sortedStationsDistance(lat1, lon1, stations)
                 for d in dist[:b]:
-                    #print d
                     c.execute("INSERT OR IGNORE INTO closest (zid, sid, distance) VALUES (?, ?, ?)", (zid, d[1], d[0]))
         conn.commit()
     conn.commit()
     conn.close()
+
 
 def createClosestTable(c):
     """Create closest table
@@ -382,7 +411,8 @@ def createClosestTable(c):
     try:
         c.execute('''CREATE TABLE closest (zid INT, sid INT, distance FLOAT, UNIQUE(zid, sid) ON CONFLICT REPLACE)''')
     except:
-        print("WARNING: Table closest already created")    
+        print("WARNING: Table closest already created")
+
 
 def dropClosestTable(options):
     conn = sqlite3.connect(options.database)
@@ -395,6 +425,7 @@ def dropClosestTable(options):
     conn.close()
     print("Drop 'closest' table completed")
 
+
 def clearGoogleLatLon(options):
     conn = sqlite3.connect(options.database)
     c = conn.cursor()
@@ -405,14 +436,15 @@ def clearGoogleLatLon(options):
     conn.commit()
     conn.close()
     print("Clear Google Maps Lat/Lon completed")
-    
+
+
 def exportClosestStations(options):
     """Export closest stations for each zip code to CSV file
     """
     conn = sqlite3.connect(options.database)
     c = conn.cursor()
     c2 = conn.cursor()
-    
+
     try:
         c.execute("select max(n) from (select count(*) n from closest group by zid)")
         r = c.fetchone()
@@ -421,18 +453,18 @@ def exportClosestStations(options):
         print("WARNING: No closest station in database, please run the script with -c to update")
         conn.close()
         return
-    
+
     """Create output file
     """
-    try:    
-        csvfile = open(options.outfile, 'wb')    
+    try:
+        csvfile = open(options.outfile, 'wb')
         csvwriter = csv.writer(csvfile, dialect='excel', delimiter=',',
                                 quotechar='"', quoting=csv.QUOTE_MINIMAL)
     except:
         print("ERROR: Cannot create output file")
         sys.exit(-1)
-    
-    
+
+
     # Prepare header
     headers = ['zip', 'lat', 'lon', 'gm_lat', 'gm_lon', 'diff', 'city', 'state', 'zipcodetype', 'locationtype', 'location', 'decommisioned', 'taxreturnsfiled', 'estimatedpopulation', 'totalwages']
     for i in range(max_station):
@@ -457,12 +489,13 @@ def exportClosestStations(options):
         csvwriter.writerow(a)
     conn.close()
     csvfile.close()
-    
+
+
 def parse_command_line(argv):
     """Command line options parser for the script
     """
     usage = "usage: %prog [options]"
-            
+
     parser = optparse.OptionParser(usage=usage)
     parser.add_option("-D", "--database", action="store", 
                       dest="database", default=SQLITE_DB_NAME,
@@ -502,17 +535,40 @@ def parse_command_line(argv):
                       help="Clear Google Maps Geocoding API Lat/Lon")
     parser.add_option("--use-zlatlon", action="store_true", 
                       dest="use_zlatlon", default=False,
-                      help="Use Zip Lat/Lon instead of Google Geocoding Lat/Lon")
-        
+                      help="Use Zip Lat/Lon instead of Google Geocoding Lat/Lon")        
     return parser.parse_args(argv)
 
-def main(options, args):
+
+def download(url, local):
+    print("Downloading '{:s}'...".format(url))
+    response = urlopen(url)
+    content = response.read()
+    with open(local, 'wb') as f:
+        f.write(content)
+
+
+def main(argv=sys.argv):
+    sys.stdout = Logger()
+    signal.signal(signal.SIGINT, signal_handler)
+
+    (options, args) = parse_command_line(argv)
+
+    if not os.path.exists(US_ZIP_LIST):
+        download(FREE_ZIPCODE_DOWNLOAD_URL, US_ZIP_LIST)
+
+    if not os.path.exists(GHCND_STATIONS_LIST):
+        download(GHCND_STATIONS_LIST_URL, GHCND_STATIONS_LIST)
+
+    if not os.path.exists(ISD_STATIONS_LIST):
+        download(ISD_STATIONS_LIST_URL, ISD_STATIONS_LIST)
+
     if not os.path.exists(options.database) or options.importdb:
         importZip(options)
         importGHCND(options)
-        importASOS(options)
-        importCOOP(options)
-        importISH(options)
+        # FIXME: ASOS and COOP no longer available
+        #importASOS(options)
+        #importCOOP(options)
+        importISD(options)
     if options.drop_closest:
         dropClosestTable(options)
     if options.clear_glatlon:
@@ -523,18 +579,11 @@ def main(options, args):
         updateClosestStations(options)
     if options.export:
         exportClosestStations(options)
-    
+
+
 def signal_handler(signal, frame):
-    print 'You pressed Ctrl+C!'
+    print('You pressed Ctrl+C!')
     os._exit(1)
-    
+
 if __name__ == "__main__":
-    reload(sys)
-    sys.setdefaultencoding('utf-8')
-    sys.stdout = Logger()
-    signal.signal(signal.SIGINT, signal_handler)
-    
-    print("{0!s} r3 (2013/07/07)\n".format((os.path.basename(sys.argv[0]))))
-    (options, args) = parse_command_line(sys.argv)
-    main(options, args)
-    
+    main()

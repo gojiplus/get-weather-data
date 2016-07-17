@@ -1,93 +1,27 @@
-import csv
-import urllib
-import urllib2
-import sqlite3
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import os
-import calendar
-import gzip
-import time
-import sys
-import math
+import urllib
 import re
-import optparse
-import signal
+import time
+import math
+import sqlite3
+import sys
+import gzip
+import logging
+import csv
 
-from datetime import date, timedelta
+from datetime import datetime, timedelta
+from pkg_resources import resource_filename
 
-SQLITE_DB_NAME      = 'zip2ws.sqlite'
-ZIP_STATIONS_FILE   = 'zip-stations.csv'
-CSV_OUTPUT_FILE     = 'output.csv'
-COLUMN_NAMES_FILE   = 'column-names.txt'
-NTH_CLOSEST_STATION = 5
-LOGFILE             = 'zip2wd.log'
+# Python 2 and 3
+try:
+    from urllib.request import urlopen
+    from urllib.error import HTTPError
+except ImportError:
+    from urllib2 import urlopen, HTTPError
 
-class Logger(object):
-    """Standard output wrapper class
-    """
-    def __init__(self, filename=LOGFILE):
-        self.terminal = sys.stdout
-        self.log = open(filename, "w")
-
-    def write(self, message):
-        self.terminal.write(message)
-        self.log.write(message)
-        
-def parse_command_line(argv):
-    """Command line options parser for the script
-    """
-    usage = "usage: %prog [options] <input file>"
-            
-    parser = optparse.OptionParser(usage=usage)
-    parser.add_option("-c", "--closest", action="store", 
-                  type="int", dest="closest",
-                  help="Search within n-th closest station")    
-    parser.add_option("-d", "--distance", action="store", 
-                  type="int", dest="distance",
-                  help="Search within distance (KM)")    
-    parser.add_option("-D", "--database", action="store", 
-                      dest="database", default=SQLITE_DB_NAME,
-                      help="Database name (default: {0!s})".format((SQLITE_DB_NAME)))        
-    parser.add_option("-o", "--outfile", action="store", 
-                      dest="outfile", default=CSV_OUTPUT_FILE,
-                      help="CSV Output file name (default: {0!s})".format((CSV_OUTPUT_FILE)))    
-    parser.add_option("-z", "--zip2ws", action="store_true", 
-                  dest="zip2ws", default=False,
-                  help="Search by closest table of zip2ws")    
-    parser.add_option("--columns", action="store", 
-                      dest="columns", default=COLUMN_NAMES_FILE,
-                      help="Column names file (default: {0!s})".format((COLUMN_NAMES_FILE)))            
-    return parser.parse_args(argv)
-
-not_found_list = []
-def download_data_file(url, file):
-    """Download weather data file from server if it not exist in local directory
-    """
-    if url in not_found_list:
-        print("WARNING: This URL no data on server {0!s}".format((url)))
-        return False
-    if not os.path.exists(file):
-        retry = 0
-        while True:
-            try:
-                print url, file
-                urllib.urlretrieve(url, file)
-                return True
-            except Exception as e:
-                m = re.match(".*\s(\d\d\d)\s.*", str(e))
-                if m:
-                    print("WARNING: FTP server error code = {0!s}".format((m.group(1)))) 
-                    if m.group(1) == '550':
-                        not_found_list.append(url)
-                        return False
-                print("WARNING: Unknown FTP server error = {0!s}".format(str(e))) 
-                if retry < 5:
-                    retry += 1
-                    print("Retry #{0:d}: waiting...({1:d}s)".format(retry, retry * 10))
-                    time.sleep(retry * 10)
-                else:
-                    print("WARNING: Cannot download data from URL = {0!s}".format(url))
-                    return False
-    return True
 
 """Constants
 """
@@ -95,326 +29,361 @@ nauticalMilePerLat = 60.00721
 nauticalMilePerLongitude = 60.10793
 rad = math.pi / 180.0
 metersPerNauticalMile = 1852
-        
-def metersGeoDistance(lat1, lon1, lat2, lon2):
-    """Returns calculate distance between two lat lons in meters
-    """
-    yDistance = (lat2 - lat1) * nauticalMilePerLat
-    xDistance = (math.cos(lat1 * rad) + math.cos(lat2 * rad)) * (lon2 - lon1) * (nauticalMilePerLongitude / 2)
 
-    distance = math.sqrt( yDistance**2 + xDistance**2 )
+STATION_INFO_COLS = ["sid", "type", "name", "lat", "lon", "nth", "distance"]
 
-    return distance * metersPerNauticalMile
-    
-def f2c(f):
-    """Convert Fahrenheit to Celsius
-    """
-    return (f - 32) * 5.0/9.0
+USAF_WBAN_DATA = [('TEMP', 24, 30), ('DEWP', 35, 41), ('SLP', 46, 52),
+                  ('STP', 57, 63), ('VISIB', 68, 73), ('AWND', 78, 83),
+                  ('MXSPD', 88, 93), ('GUST', 95, 100), ('TMAX', 102, 108),
+                  ('MAXF', 108, 109), ('TMIN', 110, 116), ('MINF', 116, 117),
+                  ('PRCP', 118, 123), ('PRCPF', 123, 124), ('SNWD', 125, 130),
+                  ('FRSHTT', 132, 138)]
 
-def kn2ms(kn):
-    """Convert Knots to m/s
-    """
-    return 0.51444 * kn
-    
-def getStations(options):
-    """Returns all stations from database
-    """
-    conn = sqlite3.connect(options.database)
-    c = conn.cursor()
-    c.execute("select rowid, id, name, lat, lon, type from stations")
-    stations = []
-    for r in c:
-        stations.append(r)
-    conn.close()
-    return stations
 
-def sortStations(zipcode, r, stations):
-    """Returns sorted stations list by distance
-    """
-    if r is None:
-        print("WARNING: zipcode = {0!s} not found".format((zipcode)))
-        return None
-    lat1 = r[3]
-    if lat1 is None:
-        lat1 = r[1]
-    lon1 = r[4]
-    if lon1 is None:
-        lon1 = r[2]
-    if lat1 == '' or lon1 == '':
-        print("WARNING: not lat/lon for zipcode = {0!s}".format((zipcode)))
-        return None
-    lat1 = float(lat1)
-    lon1 = float(lon1)
-    dist = []
-    for s in stations:
-        sid = s[0]
-        id = s[1]
-        name = s[2]
-        type = s[5]
-        if s[3] is None or s[4] is None: continue
-        lat2 = float(s[3])
-        lon2 = float(s[4])
-        try:
-            distance = metersGeoDistance(lat1, lon1, lat2, lon2)
-        except:
-            distance = sys.maxint
-        dist.append((int(distance), id, type, name, lat2, lon2))
-    return sorted(dist)
+def download(url, local):
+    print("Downloading '{:s}'...".format(url))
+    start = time.time()
+    response = urlopen(url)
+    content = response.read()
+    with open(local, 'wb') as f:
+        f.write(content)
+    elapse = time.time() - start
+    print("Elapse time: {:f} seconds".format(elapse))
 
-def writeResultRow(writer, row):
-    """Write result row to file
-    """
-    print("result: {0!s}\n".format(str(row)))
-    writer.writerow(row)
-    
-def main(options, args):
-    """Main program
-    """
-    MONTH_ABBR = dict((k,v.lower()) for k,v in enumerate(calendar.month_abbr))
-    USAF_WBAN_DATA = [('TEMP', 24, 30), ('DEWP', 35, 41), ('SLP', 46, 52), ('STP', 57, 63), ('VISIB', 68, 73), ('AWND', 78, 83), ('MXSPD', 88, 93), ('GUST', 95, 100), ('TMAX', 102, 108), ('MAXF', 108, 109), ('TMIN', 110, 116), ('MINF', 116, 117), ('PRCP', 118, 123), ('PRCPF', 123, 124), ('SNWD', 125, 130), ('FRSHTT', 132, 138)]
 
-    COMMON_ORDERS = ["sid", "type", "name", "lat", "lon", "nth", "distance"]
-
-    conn = sqlite3.connect(options.database)
-    c = conn.cursor()
-    stations = getStations(options)
-    
-    BASIC_HEADERS = '"uniqid","zip","year","month","day"'
-    EXTENDED_HEADERS = '"uniqid","zip","from.year","from.month","from.day","to.year","to.month","to.day"'
-
-    out_extended = None
-    total_rows = 0             
+def build_ghcn_database(args, year, dbname):
+    conn = None
     try:
-        with open(options.outfile, 'rb') as of:
-            reader = csv.reader(of)
-            out_extended = False
-            for r in reader:
-                if total_rows == 0 and r[2] == 'from.year':
-                    out_extended = True
-                total_rows += 1
-    except IOError:
-        pass
+        local = os.path.join(args.dbpath, "{:s}.csv.gz".format(year))
+        if not os.path.exists(local):
+            if not os.path.exists(args.dbpath):
+                os.makedirs(args.dbpath)
+            url = "ftp://ftp.ncdc.noaa.gov/pub/data/ghcn/daily/by_year/{:s}.csv.gz".format(year)
+            download(url, local)
+        conn = sqlite3.connect(dbname)
+        c = conn.cursor()
+        c.execute("""CREATE TABLE IF NOT EXISTS `ghcn_{:s}` (
+`id` VARCHAR(12) NOT NULL,
+`date` VARCHAR(8) NOT NULL,
+`element` VARCHAR(4) NULL,
+`value` VARCHAR(6) NULL,
+`m_flag` VARCHAR(1) NULL,
+`q_flag` VARCHAR(1) NULL,
+`s_flag` VARCHAR(1) NULL,
+`obs_time` VARCHAR(4) NULL)""".format(year))
 
-    options.extended = False
-    options.maxdays = 0
-    with open(options.inputfile, 'r') as csvfile:
-        reader = csv.reader(csvfile)
-        r = reader.next()
-        if len(r) > 5:
-            options.extended = True
-            for r in reader:
-                from_date = date(year=int(r[2]), month=int(r[3]), day=int(r[4]))
-                to_date = date(year=int(r[5]), month=int(r[6]), day=int(r[7]))
-                diff = to_date - from_date
-                if diff.days > options.maxdays:
-                    options.maxdays = diff.days
+        c.execute("""create index if not exists idx_id_time
+on ghcn_{:s} (id, date)""".format(year))
 
-    options.maxdays += 1
-    
-    if out_extended not in [None, options.extended]:
-        print("ERROR: Input/Output files in different format")
-        sys.exit(-1)
-    
-    if options.extended:
-        headers = EXTENDED_HEADERS
-    else:
-        headers = BASIC_HEADERS
-    
-    orders = COMMON_ORDERS
-    with open(options.columns, 'rb') as f:
-        extended_orders = [r.strip() for r in f.readlines() if r[0] != '#']
-        orders.extend(extended_orders)
-        if options.extended:
-            columns = ['"{0!s}.{1:d}"'.format(r, d) for d in range(1, options.maxdays + 1) for r in orders]
-        else:
-            columns = ['"{0!s}"'.format((r)) for d in range(1, options.maxdays + 1) for r in orders]        
-        headers += ',' + ','.join(columns) + '\n'
-    
-    if total_rows == 0:
-        with open(options.outfile, 'wb') as of:
-            of.write(headers)
-        total_rows = 1        
-    output = open(options.outfile, 'ab')
-    writer = csv.writer(output, quoting=csv.QUOTE_ALL)
-    
-    with open(options.inputfile, 'r') as csvfile:
-        reader = csv.reader(csvfile, delimiter=',', quotechar='"')
-        j = -1
-        for row in reader:
-            j += 1
-            if j < total_rows:
-                continue
+        c.execute("PRAGMA journal_mode = OFF")
+        c.execute("PRAGMA synchronous = OFF")
+        # Fastest way if no memory limit
+        #c.execute("PRAGMA temp_store = MEMORY")
+        # Taking about 1GB memory (N * 1024)
+        c.execute("PRAGMA cache_size = 1000000")
+        print("Importing...")
+        start = time.time()
+        with gzip.open(local, 'rb') as f:
+            reader = csv.reader(f)
+            c.executemany("""INSERT OR IGNORE INTO ghcn_{:s}
+(id, date, element, value, m_flag, q_flag, s_flag, obs_time)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)""".format(year), reader)
+        elapse = time.time() - start
+        print("Import time: {:f} seconds".format(elapse))
+    except Exception as e:
+        logging.error(str(e))
+        raise
+    finally:
+        if conn:
+            print("Commiting...")
+            start = time.time()
+            conn.commit()
+            conn.close()
+            elapse = time.time() - start
+            print("Commit time: {:f} seconds".format(elapse))
 
-            zipcode = '0'*(5 - len(row[1])) + row[1]
-            
-            year = row[2]
-            month = row[3]
-            day = row[4]
-            from_date = date(year=int(year), month=int(month), day=int(day))
 
-            print "row: " + str(row)
+class WeatherByZip(object):
 
-            if options.extended:
-                to_date = date(year=int(row[5]), month=int(row[6]), day=int(row[7]))
-            else:
-                to_date = from_date
-                
-            c.execute('select zipcode, lat, lon, gm_lat, gm_lon, rowid from zip where zipcode = ?', (zipcode,))
-            r = c.fetchone()
-            if options.zip2ws:
-                dist = []
-                if r is not None:
-                    c.execute("select distance, id, s.type, s.name, s.lat, s.lon from closest c join stations s on c.sid = s.rowid where c.zid = ? order by c.distance", (r[5],))
-                    for r in c:
-                        dist.append((int(r[0]), r[1], r[2], r[3], r[4], r[5]))
-            else:
-                dist = sortStations(zipcode, r, stations)
-            if dist is None or len(dist) == 0:
-                writeResultRow(writer, row)
-                continue
-            while True:
-                year = str(from_date.year)
-                month = str(from_date.month)
-                day = str(from_date.day)
-                found = False
-                values = {}
-                nth = 0
-                for s in dist:
-                    nth += 1
-                    if options.closest is not None and nth > options.closest:
-                        print("WARNING: N-th station > {0:d}".format(options.closest))
-                        break
-                    if options.distance is not None and (s[0] > options.distance * 1000):
-                        print("WARNING: Distance > {0:d} km".format(options.distance))
-                        break
-                    values['nth'] = nth
-                    sid = s[1]
-                    type = s[2]
-                    values['sid'] = sid
-                    values['type'] = type
-                    values['name'] = s[3]
-                    values['lat'] = s[4]
-                    values['lon'] = s[5]
-                    values['distance'] = s[0]
-                    raw = []
-                    if type == 'GHCND':
-                        datadir = './data/ghcn-daily/all/'
-                        if not os.path.exists(datadir):
-                            os.makedirs(datadir)
-                        datafile = datadir + '{0!s}.dly'.format((sid))
-                        urlfile = 'ftp://ftp.ncdc.noaa.gov/pub/data/ghcn/daily/all/{0!s}.dly'.format((sid))
-                        if not download_data_file(urlfile, datafile):
-                            continue
-                        search = sid + year + month
-                        print("Search for: " + search)
-                        match = False
-                        with open(datafile, 'rb') as df:
-                            for l in df:
-                                if (l[:17] == search):
-                                    element = l[17:21]
-                                    offset = 21 + int(day)*8 - 8
-                                    value = l[offset:offset + 5]
-                                    mflag = l[offset+5:offset + 6]
-                                    qflag = l[offset+6:offset + 7]
-                                    sflag = l[offset+7:offset + 8]
-                                    #print "<%s> <%s> <%s> <%s> <%s>" % (element, value, mflag, qflag, sflag)
+    not_found_list = []
+
+    def get_stations(self):
+        """Returns all stations from database
+        """
+        conn = sqlite3.connect(self.args.zip2ws_db)
+        c = conn.cursor()
+        c.execute("select rowid, id, name, lat, lon, type from stations")
+        stations = []
+        for r in c:
+            stations.append(r)
+        conn.close()
+        return stations
+
+    def __init__(self, args):
+        self.args = args
+        try:
+            with open(args.columns, 'rb') as f:
+                self.output_columns = [r.strip() for r in f.readlines()
+                                       if r[0] != '#']
+        except:
+            args.columns = resource_filename(__name__, args.columns)
+            with open(args.columns, 'rb') as f:
+                self.output_columns = [r.strip() for r in f.readlines()
+                                       if r[0] != '#']
+
+        self.stations = self.get_stations()
+        logging.info('Number of Stations = {:d}'.format(len(self.stations)))
+
+    def search_weather_data(self, dist, data):
+        year = "{:04d}" .format(data['year'])
+        month = "{:02d}".format(data['month'])
+        day = "{:02d}".format(data['day'])
+        logging.debug("Date: {:s}/{:s}/{:s}".format(year, month, day))
+        found = 0
+        nth = 0
+        raw = []
+        values = {}
+        current_year = ""
+        orders = self.output_columns
+        for s in dist:
+            if self.args.nth > 0 and nth >= self.args.nth:
+                logging.info("Reach maximum n-th stations: {:d}".format(nth))
+                return values
+            if self.args.distance > 0 and s[0] >= self.args.distance * 1000:
+                logging.info("Reach maximum distance: {:d}"
+                             .format(self.args.distance))
+                return values
+            nth += 1
+            values['nth'] = nth
+            sid = s[1]
+            stype = s[2]
+            values['sid'] = sid
+            values['type'] = stype
+            values['name'] = s[3]
+            values['lat'] = s[4]
+            values['lon'] = s[5]
+            values['distance'] = s[0]
+            if stype == 'GHCND':
+                if not self.args.uses_sqlite:
+                    datadir = './data/ghcn-daily/all/'
+                    if not os.path.exists(datadir):
+                        os.makedirs(datadir)
+                    datafile = datadir + '{:s}.dly'.format(sid)
+                    urlfile = ('ftp://ftp.ncdc.noaa.gov/pub/data/ghcn/daily/'
+                               'all/{:s}.dly'.format(sid))
+                    if not self.download_data_file(urlfile, datafile):
+                        continue
+                    search = sid + year + month
+                    match = False
+                    with open(datafile, 'rb') as df:
+                        for l in df:
+                            if (l[:17] == search):
+                                element = l[17:21]
+                                offset = 21 + int(day) * 8 - 8
+                                value = l[offset:offset + 5]
+                                mflag = l[offset + 5:offset + 6]
+                                qflag = l[offset + 6:offset + 7]
+                                sflag = l[offset + 7:offset + 8]
+                                logging.debug("<{:s}> <{:s}> <{:s}> <{:s}>"
+                                              " <{:s}>".format(element, value,
+                                                               mflag, qflag,
+                                                               sflag))
+                                match = True
+                                if value != '-9999' and (element in orders):
+                                    if not values.get(element):
+                                        values[element] = value
+                                        found += 1
+                                        raw.append(l)
+                            elif match:
+                                break
+                else:
+                    if current_year != year:
+                        current_year = year
+                        dbname = os.path.join(self.args.dbpath,
+                                              "ghcn_{:s}.sqlite3".format(year))
+                        if not os.path.exists(dbname):
+                            build_ghcn_database(self.args, year, dbname)
+                        conn2 = sqlite3.connect(dbname)
+                        c2 = conn2.cursor()
+                        # FIXME: try to optimize with these options
+                        c2.execute("PRAGMA journal_mode = MEMORY")
+                        c2.execute("PRAGMA synchronous = OFF")
+                        c2.execute("PRAGMA temp_store = MEMORY")
+                        c2.execute("PRAGMA cache_size = 500000")
+                    ghcn_values = self.get_ghcn_data(c2, sid, year, month, day)
+                    for element in ghcn_values:
+                        value = ghcn_values[element]
+                        if value != '-9999' and (element in orders):
+                            if not values.get(element):
+                                found += 1
+                                values[element] = value
+            elif stype == 'USAF-WBAN':
+                datadir = './data/gsod/{:s}/'.format(year)
+                if not os.path.exists(datadir):
+                    os.makedirs(datadir)
+                datafile = datadir + '{:s}-{:s}.op.gz'.format(sid, year)
+                urlfile = ('ftp://ftp2.ncdc.noaa.gov/pub/data/gsod/'
+                           '{:s}/{:s}-{:s}.op.gz'.format(year, sid, year))
+                if not self.download_data_file(urlfile, datafile):
+                    continue
+                search = year + month + day
+                with gzip.open(datafile, 'rb') as df:
+                    for l in df:
+                        if l[14:22] == search:
+                            match = False
+                            for d in USAF_WBAN_DATA:
+                                element = d[0]
+                                value = l[d[1]:d[2]]
+                                if element in ['TMAX', 'TMIN']:
+                                    if value != '9999.9':
+                                        value = self.f2c(float(value)) * 10
+                                elif element in ['AWND']:
+                                    if value != '999.9':
+                                        value = self.kn2ms(float(value)) * 10
+                                if (not values.get(element) and
+                                   (element in orders)):
+                                    found += 1
                                     values[element] = value
                                     match = True
-                                    found = True
-                                    raw.append(l)
-                                elif match:
-                                    break
-                    elif type == 'COOP':
-                        datadir = './data/coop/3200/{0!s}/'.format((year))
-                        if not os.path.exists(datadir):
-                            os.makedirs(datadir)
-                        datafile = datadir + '3200{0!s}{1!s}'.format(MONTH_ABBR[int(month)], year)
-                        urlfile = 'ftp://ftp3.ncdc.noaa.gov/pub/data/3200/{0!s}/3200{1!s}{2!s}'.format(year, MONTH_ABBR[int(month)], year)
-                        if not download_data_file(urlfile, datafile):
-                            continue
-                        search = year + month
-                        print("Search for: " + search)
-                        match = False
-                        with open(datafile, 'rb') as df:
-                            for l in df:
-                                if l[3:9] == sid[:6] and l[17:23] == search:
-                                    element = l[11:15]
-                                    offset = 30
-                                    while offset < len(l) - 1 and int(l[offset:offset+2]) != int(day):
-                                        offset = offset + 12
-                                    if offset >= len(l) - 1:
-                                        print("WARNING: data not found for day = {0!s}".format((day)))
-                                    else:
-                                        offset += 4
-                                        value = l[offset:offset + 6]
-                                        qflag1 = l[offset+6:offset + 7]
-                                        qflag2 = l[offset+7:offset + 8]
-                                        if element in ['TOBS', 'TMAX', 'TMIN']:
-                                            value = f2c(float(value)) * 10
-                                        #print "<%s> <%s> <%s> <%s>" % (element, value, qflag1, qflag2)
-                                        values[element] = value
-                                    match = True
-                                    found = True
-                                    raw.append(l)
-                                elif match:
-                                    break
-                    elif type == 'USAF-WBAN':
-                        datadir = './data/gsod/{0!s}/'.format((year))
-                        if not os.path.exists(datadir):
-                            os.makedirs(datadir)
-                        datafile = datadir + '{0!s}-{1!s}.op.gz'.format(sid, year)
-                        urlfile = 'ftp://ftp2.ncdc.noaa.gov/pub/data/gsod/{0!s}/{1!s}-{2!s}.op.gz'.format(year, sid, year)
-                        if not download_data_file(urlfile, datafile):
-                            continue
-                        search = year + month + day
-                        print("Search for: " + search)
-                        with gzip.open(datafile, 'rb') as df:
-                            for l in df:
-                                if l[14:22] == search:
-                                    for d in USAF_WBAN_DATA:
-                                        element = d[0]
-                                        value = l[d[1]:d[2]]
-                                        if element in ['TMAX', 'TMIN']:
-                                            if value != '9999.9':
-                                                value = f2c(float(value))*10
-                                        elif element in ['AWND']:
-                                            if value != '999.9':
-                                                value = kn2ms(float(value))*10
-                                        #print "<%s> <%s>" % (element, value)
-                                        values[element] = value
-                                    found = True
-                                    raw.append(l)
-                                    break
-                    if found:
-                        break
-                #print values
-                values['RAW'] = ''.join(raw)
-                for o in orders:
-                    row.append(values.get(o, "NA"))
-                from_date = from_date + timedelta(days=1)
-                if from_date > to_date:
-                    break
-            writeResultRow(writer, row)
-    output.close()
-    conn.close()
-    
-def signal_handler(signal, frame):
-    print 'You pressed Ctrl+C!'
-    os._exit(1)
-    
-if __name__ == "__main__":
-    reload(sys)
-    sys.setdefaultencoding('utf-8')
-    sys.stdout = Logger()
-    signal.signal(signal.SIGINT, signal_handler)
-    
-    print("{0} r4 (2013/07/24)\n".format(sys.argv[0]))
-    (options, args) = parse_command_line(sys.argv)
-    if len(args) < 2:
-        print("Please specific input file")
-    else:
-        options.inputfile = args[1]
-        if options.closest is None and options.distance is None:
-            options.zip2ws = True
-        main(options, args)
-        
+                            if match:
+                                raw.append(l)
+                            break
+            if found >= len(orders):
+                break
+        logging.debug(values)
+        # For debug only
+        # values['RAW'] = ''.join(raw)
+        return values
+
+    def search(self, search):
+        zipcode = '0' * (5 - len(search['zip'])) + search['zip']
+
+        logging.info("Search for: '{:s}'".format(zipcode))
+
+        from_date = datetime(year=search['from.year'],
+                             month=search['from.month'],
+                             day=search['from.day'])
+        to_date = datetime(year=search['to.year'],
+                           month=search['to.month'],
+                           day=search['to.day'])
+        columns = (['uniqid', 'zip', 'year', 'month', 'day'] +
+                   STATION_INFO_COLS + self.output_columns)
+        results = []
+        conn = sqlite3.connect(self.args.zip2ws_db)
+        c = conn.cursor()
+        c.execute('select zipcode, lat, lon, gm_lat, gm_lon, rowid from zip'
+                  ' where zipcode = ?', (zipcode,))
+        r = c.fetchone()
+        dist = self.sort_stations(zipcode, r, self.stations)
+        while from_date <= to_date:
+            data = {}
+            data['uniqid'] = search['uniqid']
+            data['zip'] = zipcode
+            data['year'] = from_date.year
+            data['month'] = from_date.month
+            data['day'] = from_date.day
+            if dist and len(dist) > 0:
+                wdata = self.search_weather_data(dist, data)
+                data.update(wdata)
+            results.append(data)
+            from_date += timedelta(days=1)
+        return results
+
+    def download_data_file(self, url, file):
+        """Download weather data file from server if it not exist in local directory
+        """
+        if url in self.not_found_list:
+            logging.warn("This URL no data on server {:s}".format(url))
+            return False
+        if not os.path.exists(file):
+            retry = 0
+            while True:
+                try:
+                    logging.info("Downloading '{:s}'".format(url))
+                    urllib.urlretrieve(url, file)
+                    return True
+                except Exception as e:
+                    m = re.match(".*\s(\d\d\d)\s.*", str(e))
+                    if m:
+                        logging.warn("FTP server error code = {:s}"
+                                     .format(m.group(1)))
+                        if m.group(1) == '550':
+                            self.not_found_list.append(url)
+                            return False
+                    logging.warn("Unknown FTP server error = {:s}"
+                                 .format(str(e)))
+                    if retry < 5:
+                        retry += 1
+                        logging.info("Retry #{:d}: waiting...({:d}s)"
+                                     .format(retry, retry * 10))
+                        time.sleep(retry * 10)
+                    else:
+                        logging.warn("Cannot download data from URL = {:s}"
+                                     .format(url))
+                        return False
+        return True
+
+    def metersGeoDistance(self, lat1, lon1, lat2, lon2):
+        """Returns calculate distance between two lat lons in meters
+        """
+        yDistance = (lat2 - lat1) * nauticalMilePerLat
+        xDistance = ((math.cos(lat1 * rad) + math.cos(lat2 * rad)) *
+                     (lon2 - lon1) * (nauticalMilePerLongitude / 2))
+
+        distance = math.sqrt(yDistance**2 + xDistance**2)
+
+        return distance * metersPerNauticalMile
+
+    def f2c(self, f):
+        """Convert Fahrenheit to Celsius
+        """
+        return (f - 32) * 5.0/9.0
+
+    def kn2ms(self, kn):
+        """Convert Knots to m/s
+        """
+        return 0.51444 * kn
+
+    def sort_stations(self, zipcode, r, stations):
+        """Returns sorted stations list by distance
+        """
+        if r is None:
+            logging.warn("zipcode = {:s} not found".format(zipcode))
+            return None
+        lat1 = r[3]
+        if lat1 is None:
+            lat1 = r[1]
+        lon1 = r[4]
+        if lon1 is None:
+            lon1 = r[2]
+        if lat1 == '' or lon1 == '':
+            logging.warn("not lat/lon for zipcode = {:s}".format(zipcode))
+            return None
+        lat1 = float(lat1)
+        lon1 = float(lon1)
+        dist = []
+        for s in stations:
+            # sid = s[0]
+            id = s[1]
+            name = s[2]
+            stype = s[5]
+            if s[3] is None or s[4] is None:
+                continue
+            lat2 = float(s[3])
+            lon2 = float(s[4])
+            try:
+                distance = self.metersGeoDistance(lat1, lon1, lat2, lon2)
+            except:
+                distance = sys.maxint
+            dist.append((int(distance), id, stype, name, lat2, lon2))
+        return sorted(dist)
+
+    def get_ghcn_data(self, cursor, sid, year, month, day):
+        cursor.execute("select * from ghcn_{:s} where id = ? and date = ?"
+                       .format(year), (sid, '{:02d}{:02d}{:02d}'
+                                       .format(int(year), int(month),
+                                               int(day))))
+        values = {}
+        for r in cursor:
+            values[r[2]] = r[3]
+        return values

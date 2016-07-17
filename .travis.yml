@@ -1,24 +1,40 @@
+sudo: false
 language: python
-
 python:
-    - 2.7
-
-notifications:
-  email: false
-
-sudo: required
-
+- '2.7'
+env:
+  - NCDC_TOKEN=YcnZInRPxWnyyDEvysQNaTHrtgMEMHZD
+# command to install dependencies
 install:
-    - pip install --upgrade pip
-    - pip install geonames
-    - pip install pygeocoder
-    - pip install lxml
-
-script:
-    - python noaaweb/noaaweb.py noaaweb/samplein.csv
-
-
-
-
-
-
+  - "pip install ."
+  - "pip install -r requirements.txt"
+# command to run tests
+script: nosetests
+before_deploy: "echo 'ready?'"
+deploy:
+  # test pypi
+  - provider: pypi
+    server: https://testpypi.python.org/pypi
+    user: suriyan
+    password:
+      secure: hyOiDN4JR5A1UMof2okDwp1DaDMJvCFqRVLj4Ud7AI5TVpEs+qkx94qtjRa0ytpnGzbv+Fxs4AOdKHmC+VQ6VGHd1QhvFPY7efhVeVaiEwC5Yy1QTPtjndd1oRlHfha+EvpBrTrtlp0UW82b1pUr2mQyt/sYXFJD5dFK3H5lPPVhkta89N5bJ1ZruNFIcC4vjLv4LNzr2RDMdLRXLwq3DXmieKHzzed6NdWOUaAOF/fxpEaWykkOueLvMA4z6tspJu4pdrpZIx8XEMZwmL86nOdk2jvjSF9Zl29XlRPIyZjO5HMEKUJQUvcK6Gbh8Uc8TzPu8vut6K5b2xXf4fgVpPIcFRGLYbvMyi6mwOkAOvudkQ+IXNKcQ3yx8tAos52cTrWsoKe5xjy+UIqmxIIBRNPWTbiXuwUE5IS98QoBDKrm+Z/wmzfKuTqepmuWc9jg9RrbTx/xSpOzwCDIRpdpVM6fISRQPYisrjjvp4XJ9QYPIFR7pjPPqxm4XqYzTGAcZwX36eD64DRTVtY+/L55kNwgO60u/9A6XQ6O3yqBkpCjzeesavlqW8cVgtb+fjrouPDXQALi8UQ44ImO33ffbJHIyRW2vWgjNBf3s2AUgShPxNh92RtLEig7njSLHwLZH26CnOcCluIuvBKSq/690S4d6xkDavSXBcgSPHu3M8A=
+    on:
+      tags: false
+      distributions: sdist bdist_wheel
+      repo: suriyan/get-weather-data
+      branch: pypi
+      condition: $TRAVIS_PYTHON_VERSION = "2.7"
+  # production pypi
+  - provider: pypi
+    user: suriyan
+    password:
+      secure: hyOiDN4JR5A1UMof2okDwp1DaDMJvCFqRVLj4Ud7AI5TVpEs+qkx94qtjRa0ytpnGzbv+Fxs4AOdKHmC+VQ6VGHd1QhvFPY7efhVeVaiEwC5Yy1QTPtjndd1oRlHfha+EvpBrTrtlp0UW82b1pUr2mQyt/sYXFJD5dFK3H5lPPVhkta89N5bJ1ZruNFIcC4vjLv4LNzr2RDMdLRXLwq3DXmieKHzzed6NdWOUaAOF/fxpEaWykkOueLvMA4z6tspJu4pdrpZIx8XEMZwmL86nOdk2jvjSF9Zl29XlRPIyZjO5HMEKUJQUvcK6Gbh8Uc8TzPu8vut6K5b2xXf4fgVpPIcFRGLYbvMyi6mwOkAOvudkQ+IXNKcQ3yx8tAos52cTrWsoKe5xjy+UIqmxIIBRNPWTbiXuwUE5IS98QoBDKrm+Z/wmzfKuTqepmuWc9jg9RrbTx/xSpOzwCDIRpdpVM6fISRQPYisrjjvp4XJ9QYPIFR7pjPPqxm4XqYzTGAcZwX36eD64DRTVtY+/L55kNwgO60u/9A6XQ6O3yqBkpCjzeesavlqW8cVgtb+fjrouPDXQALi8UQ44ImO33ffbJHIyRW2vWgjNBf3s2AUgShPxNh92RtLEig7njSLHwLZH26CnOcCluIuvBKSq/690S4d6xkDavSXBcgSPHu3M8A=
+    on:
+      tags: true
+      distributions: sdist bdist_wheel
+      repo: suriyan/get-weather-data
+      branch: pypi
+      condition: $TRAVIS_PYTHON_VERSION = "2.7"
+after_deploy:
+  - "echo 'after'"
+  - "echo 'done'"
