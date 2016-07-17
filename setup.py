@@ -8,6 +8,7 @@ https://github.com/pypa/sampleproject
 from setuptools import setup, find_packages
 from setuptools.command.develop import develop
 from setuptools.command.install import install
+from setuptools.command.test import test as TestCommand
 
 # To use a consistent encoding
 from codecs import open
@@ -33,6 +34,24 @@ class PostInstallCommand(install):
         print("TODO: PostInstallCommand")
         install.run(self)
 
+
+class Tox(TestCommand):
+    user_options = [('tox-args=', 'a', "Arguments to pass to tox")]
+    def initialize_options(self):
+        TestCommand.initialize_options(self)
+        self.tox_args = None
+    def finalize_options(self):
+        TestCommand.finalize_options(self)
+        self.test_args = []
+        self.test_suite = True
+    def run_tests(self):
+        #import here, cause outside the eggs aren't loaded
+        import tox
+        import shlex
+        args = self.tox_args
+        if args:
+            args = shlex.split(self.tox_args)
+        tox.cmdline(args=args)
 
 setup(
     name='get-weather-data',
@@ -133,5 +152,7 @@ setup(
     cmdclass={
         'develop': PostDevelopCommand,
         'install': PostInstallCommand,
+        'test': Tox,
     },
+    tests_require=['tox'],
 )
