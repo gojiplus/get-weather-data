@@ -2,9 +2,14 @@ sudo: false
 language: python
 python:
 - '2.7'
-- '3.4'
-install: pip install tox
-script: tox
+env:
+  - NCDC_TOKEN=YcnZInRPxWnyyDEvysQNaTHrtgMEMHZD
+# command to install dependencies
+install:
+  - "pip install ."
+  - "pip install -r requirements.txt"
+# command to run tests
+script: nosetests
 before_deploy: "echo 'ready?'"
 deploy:
   # test pypi

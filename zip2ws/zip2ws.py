@@ -547,13 +547,11 @@ def download(url, local):
         f.write(content)
 
 
-def main():
-    reload(sys)
-    sys.setdefaultencoding('utf-8')
+def main(argv=sys.argv):
     sys.stdout = Logger()
     signal.signal(signal.SIGINT, signal_handler)
 
-    (options, args) = parse_command_line(sys.argv)
+    (options, args) = parse_command_line(argv)
 
     if not os.path.exists(US_ZIP_LIST):
         download(FREE_ZIPCODE_DOWNLOAD_URL, US_ZIP_LIST)
@@ -567,7 +565,7 @@ def main():
     if not os.path.exists(options.database) or options.importdb:
         importZip(options)
         importGHCND(options)
-        # FIXME: ASOS and COOP will not be available
+        # FIXME: ASOS and COOP no longer available
         #importASOS(options)
         #importCOOP(options)
         importISD(options)
