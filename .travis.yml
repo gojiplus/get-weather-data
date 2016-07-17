@@ -1,7 +1,23 @@
 sudo: false
 language: python
 python:
-  - "2.7"
-  - "3.4"
+- '2.7'
+- '3.4'
 install: pip install tox-travis
 script: tox
+before_deploy: "echo 'ready?'"
+deploy:
+  provider: pypi
+  server: https://testpypi.python.com/index
+  user: suriyan
+  password:
+    secure: b25BAMtb95ub/EYRbJugbG2t8VdQ7o2RhXHRAMouxVm6Fr6KbSfgir8t/zfD7lejdUJRJp3rZOoCb5yGj+BbXGK4/hCADw14XCYOlPjNVoOZ5JrD7WiQhCECuq105Kkqgh9BX9GNAnVmarHAbMxWvvthM6vp/H4YGUPWun1iUnSnLtBQHxIl0iIT3Uk5khIw/0p8p/27fvuITIShvpz+CWGC4tJ+nQeagkpEBTxc7Eah+9raNiKyiBCUcHkMbzgd+zTVbZvG4lpFUGegcbFolXJnTn6nPZCIGipa314TPxQ6cAh+2qv3sYUXrPN+Wqv9cmTQ/EmGaZo0znee8bQcPtsljdJeXGy11PIyI398NQtJ70ryCiDOWuhn5k9PdyFVBtgXLxhtseWwOJH97rAuSaFW3EN0mA2kVDkuAdzG4+106YYym51DxLmH73TdjXg0FNetryaLRg28ojYrD4FNN/T/lQIWKJ/aBzYWO4JAthNPGwlDxxXxM1W05Co0QUJBVqou5jKb5GF/+yh+HK/0sDRX9DXKa7tTFCEDY5Vw5aTD3zDvGcZc+mfQkx3MmHDzGAADo13Cuu52SUKmRlkuJnhj3cz06PTeW/p2DuWqml0WsCjBFJruXZqEBvDeGbDdfGvqQuOdUt6Yl7pbZ56IamF8hK+XVoTp3ttNfY4/xBU=
+  on:
+    tags: true
+    distributions: sdist bdist_wheel
+    repo: suriyan/get-weather-data
+    branch: pypi
+after_deploy:
+  - "echo 'after'"
+  - "echo 'done'"
+
