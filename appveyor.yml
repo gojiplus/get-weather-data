@@ -1,6 +1,7 @@
 build: false
 
 environment:
+  NCDC_TOKEN: YcnZInRPxWnyyDEvysQNaTHrtgMEMHZD
   matrix:
     - PYTHON: "C:\\Python27"
       PYTHON_VERSION: "2.7.8"
@@ -10,6 +11,7 @@ init:
   - "ECHO %PYTHON% %PYTHON_VERSION% %PYTHON_ARCH%"
 
 install:
+  - "%PYTHON%/Scripts/pip.exe install ."
   - "%PYTHON%/Scripts/pip.exe install -r requirements.txt"
 
 test_script:
