@@ -21,7 +21,7 @@ deploy:
     on:
       tags: false
       distributions: sdist bdist_wheel
-      repo: suriyan/get-weather-data
+      repo: soodoku/get-weather-data
       branch: pypi
       condition: $TRAVIS_PYTHON_VERSION = "2.7"
   # production pypi
@@ -32,7 +32,7 @@ deploy:
     on:
       tags: true
       distributions: sdist bdist_wheel
-      repo: suriyan/get-weather-data
+      repo: soodoku/get-weather-data
       branch: pypi
       condition: $TRAVIS_PYTHON_VERSION = "2.7"
 after_deploy:
