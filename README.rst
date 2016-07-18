@@ -61,6 +61,20 @@ Usage
 Example
 -------
 
+NCDC Web service requires token to access, you'll get it from https://www.ncdc.noaa.gov/cdo-web/token.
+
+You must set environment variable NCDC_TOKEN with the valid NCDC token, On Windows
+
+::
+
+    set NCDC_TOKEN=<your NCDC token>
+
+or On Linux
+
+::
+
+    export NCDC_TOKEN=<your NCDC token>
+
 ::
 
     noaaweb intput.csv
