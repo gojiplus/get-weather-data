@@ -1,0 +1,13 @@
+name: get_weather_docs
+channels:
+- conda-forge
+dependencies:
+- python=2.7
+- wheel
+- pyproj
+- sphinx
+- sphinx_rtd_theme
+- nose
+- tox
+- pip:
+  - utm
