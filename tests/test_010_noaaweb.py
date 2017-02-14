@@ -11,7 +11,7 @@ import unittest
 from noaaweb.noaaweb import main
 from . import capture
 
-NCDC_TOKEN = os.environ.get('NCDC_TOKEN', None)
+NCDC_TOKEN = os.environ.get('NCDC_TOKEN')
 
 @unittest.skipIf(NCDC_TOKEN is None, 'No NCDC token found in environment.')
 class TestNoaaWeb(unittest.TestCase):
