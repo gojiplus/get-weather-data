@@ -20,7 +20,7 @@ import xml.etree.ElementTree as ET
 import os
 
 CSV_OUTPUT_FILE     = 'output.csv'
-NCDC_TOKEN          = os.environ.get('NCDC_TOKEN', None)
+NCDC_TOKEN          = os.environ.get('NCDC_TOKEN')
 
 
 def get_station_id(data):
