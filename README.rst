@@ -14,7 +14,7 @@ near a zip code, and vice-versa.
 Downloads
 ^^^^^^^^^
 
-As of Feburary 3rd, 2018, the package had been downloaded over 5,000 times (see saved `Google BigQuery <https://bigquery.cloud.google.com/savedquery/267723140544:04bbf2ac64ac4abaacc67432ae5b2326>`__).
+By November 1st, 2018, the package had been downloaded over 6,000 times (see saved `Google BigQuery <https://bigquery.cloud.google.com/savedquery/267723140544:148c033b1f5d4986b848d9143a50f84b>`__).
 
 Background
 ^^^^^^^^^^
