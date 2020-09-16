@@ -13,10 +13,6 @@ Scripts for finding out the weather in a particular zip code on a
 particular day (or a set of dates). You can also find weather stations
 near a zip code, and vice-versa.
 
-Downloads
-^^^^^^^^^
-
-By November 1st, 2018, the package had been downloaded over 6,000 times (see saved `Google BigQuery <https://bigquery.cloud.google.com/savedquery/267723140544:148c033b1f5d4986b848d9143a50f84b>`__).
 
 Background
 ^^^^^^^^^^
