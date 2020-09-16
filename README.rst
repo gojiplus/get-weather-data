@@ -6,6 +6,8 @@ Get Weather Data
     :target: https://ci.appveyor.com/project/soodoku/get-weather-data/s
 .. image:: https://img.shields.io/pypi/v/get-weather-data.svg?maxAge=2592000
     :target: https://pypi.python.org/pypi/get-weather-data
+.. image:: https://pepy.tech/badge/get-weather-data
+   :target: https://pepy.tech/project/get-weather-data
 
 Scripts for finding out the weather in a particular zip code on a
 particular day (or a set of dates). You can also find weather stations
