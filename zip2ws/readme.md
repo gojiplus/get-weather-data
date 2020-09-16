@@ -38,7 +38,11 @@ To run the script, you will need to install two Python libraries:
 * [requests](http://docs.python-requests.org/en/latest/)
    To install, you can simply user: `$ pip install requests`
 
-Don't forget the inventories directory  that contains the station files and zip csv that is imported. The inventories folder should be in the same folder as the script.
+**Note** Don't forget the inventories directory  that contains the station files and zip csv that is imported. The inventories folder should be in the same folder as the script.
+<pre><code>
+ASOS_STATIONS_LIST  =   resource_filename(__name__, "inventories/asos-stations.txt")
+COOP_STATIONS_LIST  =   resource_filename(__name__, "inventories/coop-act.txt")
+</code></pre>
 
 <pre><code>
 Usage: zip2ws.py [options]
