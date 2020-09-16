@@ -3,7 +3,7 @@ Get Weather Data
 .. image:: https://travis-ci.org/soodoku/get-weather-data.svg?branch=master
     :target: https://travis-ci.org/soodoku/get-weather-data
 .. image:: https://ci.appveyor.com/api/projects/status/07gx3u2opf5i4dor?svg=true
-    :target: https://ci.appveyor.com/project/soodoku/get-weather-data/s
+    :target: https://ci.appveyor.com/project/soodoku/get-weather-data/
 .. image:: https://img.shields.io/pypi/v/get-weather-data.svg?maxAge=2592000
     :target: https://pypi.python.org/pypi/get-weather-data
 .. image:: https://pepy.tech/badge/get-weather-data
