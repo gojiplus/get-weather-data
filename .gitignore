@@ -1,7 +1,6 @@
-.*
 !.gitignore
 *.pyc
 *.log
 !.pep8speaks.yml
 output.csv
-
+dev/
