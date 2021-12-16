@@ -1,20 +1,18 @@
 Get Weather Data
 ~~~~~~~~~~~~~~~~
-.. image:: https://travis-ci.org/soodoku/get-weather-data.svg?branch=master
-    :target: https://travis-ci.org/soodoku/get-weather-data
+.. image:: https://travis-ci.com/gojiplus/get-weather-data.svg?branch=master
+    :target: https://travis-ci.com/github/gojiplus/get-weather-data
 .. image:: https://ci.appveyor.com/api/projects/status/07gx3u2opf5i4dor?svg=true
-    :target: https://ci.appveyor.com/project/soodoku/get-weather-data/s
+    :target: https://ci.appveyor.com/project/soodoku/get-weather-data/
 .. image:: https://img.shields.io/pypi/v/get-weather-data.svg?maxAge=2592000
     :target: https://pypi.python.org/pypi/get-weather-data
+.. image:: https://pepy.tech/badge/get-weather-data
+   :target: https://pepy.tech/project/get-weather-data
 
 Scripts for finding out the weather in a particular zip code on a
 particular day (or a set of dates). You can also find weather stations
 near a zip code, and vice-versa.
 
-Downloads
-^^^^^^^^^
-
-As of Feburary 3rd, 2018, the package had been downloaded over 5,000 times (see saved `Google BigQuery <https://bigquery.cloud.google.com/savedquery/267723140544:04bbf2ac64ac4abaacc67432ae5b2326>`__).
 
 Background
 ^^^^^^^^^^
