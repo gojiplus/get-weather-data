@@ -46,6 +46,12 @@ dev = [
     "ruff>=0.4",
     "mypy>=1.8",
 ]
+docs = [
+    "sphinx>=7.0",
+    "furo>=2024.0",
+    "sphinx-autodoc-typehints>=2.0",
+    "myst-parser>=3.0",
+]
 
 [project.scripts]
 get-weather = "get_weather_data.cli:main"
@@ -62,7 +68,7 @@ packages = ["src/get_weather_data"]
 include = [
     "/src",
     "/tests",
-    "/README.rst",
+    "/README.md",
     "/LICENSE",
 ]
 
@@ -86,7 +92,7 @@ warn_unused_configs = true
 mypy_path = "src"
 
 [[tool.mypy.overrides]]
-module = ["scipy.*"]
+module = ["scipy.*", "numpy.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
