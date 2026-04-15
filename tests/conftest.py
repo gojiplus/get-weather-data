@@ -1,28 +1,55 @@
 """Shared test fixtures."""
 
-from __future__ import annotations
-
 import pytest
+
+from get_weather_data.core.database import Database
+from get_weather_data.core.distance import Station
 
 
 @pytest.fixture
-def sample_stations():
+def sample_stations() -> list[Station]:
     """Sample station data for testing."""
     return [
-        (1, "USC00011084", "BREWTON", 31.0581, -87.0547, 47.2, "GHCND"),
-        (2, "USW00013894", "MOBILE", 30.6833, -88.2500, 67.0, "USAF-WBAN"),
-        (3, "USC00016988", "SELMA", 32.4069, -87.0214, 42.7, "GHCND"),
+        Station(
+            id="USC00011084",
+            name="BREWTON",
+            state="AL",
+            lat=31.0581,
+            lon=-87.0547,
+            elevation=47.2,
+            type="GHCND",
+        ),
+        Station(
+            id="USW00013894",
+            name="MOBILE",
+            state="AL",
+            lat=30.6833,
+            lon=-88.2500,
+            elevation=67.0,
+            type="USAF-WBAN",
+        ),
+        Station(
+            id="USC00016988",
+            name="SELMA",
+            state="AL",
+            lat=32.4069,
+            lon=-87.0214,
+            elevation=42.7,
+            type="GHCND",
+        ),
     ]
 
 
 @pytest.fixture
-def temp_db(tmp_path):
-    """Create a temporary database path."""
-    return tmp_path / "test.sqlite"
+def temp_db(tmp_path) -> Database:
+    """Create a temporary database."""
+    db = Database(tmp_path / "test.sqlite")
+    db.init_schema()
+    return db
 
 
 @pytest.fixture
-def sample_zip_data():
+def sample_zip_data() -> list[dict[str, str | float]]:
     """Sample ZIP code data for testing."""
     return [
         {

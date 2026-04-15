@@ -1,38 +1,36 @@
 """Tests for utility functions."""
 
-from __future__ import annotations
-
-from zip2ws.zip2ws import metersGeoDistance
+from get_weather_data.core.distance import meters_distance
 
 
-class TestMetersGeoDistance:
-    """Tests for metersGeoDistance function."""
+class TestMetersDistance:
+    """Tests for meters_distance function."""
 
     def test_same_point_returns_zero(self):
         """Distance between a point and itself should be zero."""
-        result = metersGeoDistance(40.7, -74.0, 40.7, -74.0)
+        result = meters_distance(40.7, -74.0, 40.7, -74.0)
         assert result == 0.0
 
     def test_known_distance_nyc_to_la(self):
         """Test approximate distance between NYC and LA."""
         nyc_lat, nyc_lon = 40.7128, -74.0060
         la_lat, la_lon = 34.0522, -118.2437
-        result = metersGeoDistance(nyc_lat, nyc_lon, la_lat, la_lon)
+        result = meters_distance(nyc_lat, nyc_lon, la_lat, la_lon)
         assert 3900000 < result < 4100000
 
     def test_short_distance(self):
         """Test a short distance between nearby points."""
         lat1, lon1 = 40.7128, -74.0060
         lat2, lon2 = 40.7138, -74.0070
-        result = metersGeoDistance(lat1, lon1, lat2, lon2)
+        result = meters_distance(lat1, lon1, lat2, lon2)
         assert 100 < result < 200
 
     def test_symmetry(self):
         """Distance should be symmetric."""
         lat1, lon1 = 40.7128, -74.0060
         lat2, lon2 = 34.0522, -118.2437
-        d1 = metersGeoDistance(lat1, lon1, lat2, lon2)
-        d2 = metersGeoDistance(lat2, lon2, lat1, lon1)
+        d1 = meters_distance(lat1, lon1, lat2, lon2)
+        d2 = meters_distance(lat2, lon2, lat1, lon1)
         assert abs(d1 - d2) < 1
 
 

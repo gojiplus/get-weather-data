@@ -1,7 +1,5 @@
 """Test utilities."""
 
-from __future__ import annotations
-
 import sys
 from contextlib import contextmanager
 from io import StringIO

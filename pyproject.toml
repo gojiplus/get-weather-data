@@ -4,15 +4,15 @@ build-backend = "hatchling.build"
 
 [project]
 name = "get-weather-data"
-version = "0.2.0"
-description = "Scripts for finding out the weather in a particular zip code"
+version = "3.0.0"
+description = "Get historical weather data for US ZIP codes from NOAA stations"
 readme = "README.rst"
 license = "MIT"
 authors = [
     { name = "Suriyan Laohaprapanon", email = "suriyant@gmail.com" },
     { name = "Gaurav Sood", email = "gsood07@gmail.com" },
 ]
-keywords = ["weather", "zip", "cdo", "noaa", "climate", "stations"]
+keywords = ["weather", "zip", "noaa", "climate", "stations", "ghcn", "gsod"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -30,7 +30,6 @@ dependencies = [
     "click>=8.1",
     "rich>=13.0",
     "httpx>=0.27",
-    "geopy>=2.4",
 ]
 
 [project.optional-dependencies]
@@ -46,21 +45,10 @@ dev = [
     "isort>=5.13",
     "ruff>=0.4",
     "mypy>=1.8",
-    "pydoclint>=0.4",
-    "vulture>=2.11",
-    "deptry>=0.16",
-]
-docs = [
-    "sphinx>=7.0",
-    "furo>=2024.0",
-    "sphinx-autodoc-typehints>=2.0",
 ]
 
 [project.scripts]
-noaaweb = "noaaweb.noaaweb:main"
-zip2ws = "zip2ws.zip2ws:main"
-zip2wd-manager = "zip2wd.manager:main"
-zip2wd-worker = "zip2wd.worker:main"
+get-weather = "get_weather_data.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/soodoku/get-weather-data"
@@ -68,7 +56,15 @@ Repository = "https://github.com/soodoku/get-weather-data"
 Issues = "https://github.com/soodoku/get-weather-data/issues"
 
 [tool.hatch.build.targets.wheel]
-packages = ["noaaweb", "zip2ws", "zip2wd", "ws2zip"]
+packages = ["src/get_weather_data"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+    "/tests",
+    "/README.rst",
+    "/LICENSE",
+]
 
 [tool.black]
 line-length = 88
@@ -76,31 +72,33 @@ target-version = ["py311"]
 
 [tool.isort]
 profile = "black"
+src_paths = ["src", "tests"]
 
 [tool.ruff]
 line-length = 88
 target-version = "py311"
+src = ["src", "tests"]
 
 [tool.mypy]
 python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
+mypy_path = "src"
 
 [[tool.mypy.overrides]]
-module = ["scipy.*", "geopy.*"]
+module = ["scipy.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-v --tb=short"
+pythonpath = ["src"]
 
-[tool.pydoclint]
-style = "google"
-check-return-types = false
+[tool.coverage.run]
+source = ["src/get_weather_data"]
 
-[tool.vulture]
-min_confidence = 80
-paths = ["noaaweb", "zip2ws", "zip2wd", "ws2zip"]
-
-[tool.deptry]
-extend_exclude = ["tests"]
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+]
