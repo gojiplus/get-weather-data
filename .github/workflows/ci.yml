@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Set up Python
+        run: uv python install 3.11
+
+      - name: Install dependencies
+        run: uv sync --extra dev
+
+      - name: Check formatting with black
+        run: uv run black --check .
+
+      - name: Check import sorting with isort
+        run: uv run isort --check-only .
+
+      - name: Lint with ruff
+        run: uv run ruff check .
+
+      - name: Type check with mypy
+        run: uv run mypy noaaweb zip2ws zip2wd ws2zip
+
+      - name: Check docstrings with pydoclint
+        run: uv run pydoclint noaaweb zip2ws zip2wd ws2zip || true
+
+      - name: Check dead code with vulture
+        run: uv run vulture noaaweb zip2ws zip2wd ws2zip --min-confidence 80 || true
+
+      - name: Check dependencies with deptry
+        run: uv run deptry . || true
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Set up Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: uv sync --extra dev
+
+      - name: Run tests
+        run: uv run pytest

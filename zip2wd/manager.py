@@ -1,186 +1,160 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import argparse
-import logging
-import time
+from __future__ import annotations
+
 import csv
-
-from ConfigParser import ConfigParser
+import logging
+import os
+import time
+from configparser import ConfigParser
 from functools import partial
-from Queue import Queue as _Queue
-
+from importlib.resources import files
+from logging.handlers import RotatingFileHandler
 from multiprocessing.managers import SyncManager
+from queue import Queue as _Queue
+from typing import Any
+
+import click
+from rich.console import Console
 
 from zip2wd import STATION_INFO_COLS
 
-from pkg_resources import resource_filename
+CONFIG_FILE_NAME = "zip2wd.cfg"
+DEFAULT_CONFIG_FILE = str(files(__package__) / CONFIG_FILE_NAME)
+DEF_OUTPUT_FILE = "output.csv"
+LOG_FILE = "zip2wd_manager.log"
 
-CONFIG_FILE_NAME = 'zip2wd.cfg'
-DEFAULT_CONFIG_FILE = resource_filename(__name__, CONFIG_FILE_NAME)
-DEF_OUTPUT_FILE = 'output.csv'
-LOG_FILE = 'zip2wd_manager.log'
-
-
-def setup_logger(debug):
-    """ Set up logging
-    """
-    level = logging.DEBUG if debug else logging.INFO
-    logging.basicConfig(level=level,
-                        format='%(asctime)s %(levelname)-8s %(message)s',
-                        datefmt='%m-%d %H:%M',
-                        filename=LOG_FILE,
-                        filemode='w')
-    console = logging.StreamHandler()
-    console.setLevel(level)
-    formatter = logging.Formatter('%(message)s')
-    console.setFormatter(formatter)
-    logging.getLogger('').addHandler(console)
+console = Console()
 
 
-def parse_command_line():
-    """Parse command line arguments
-    """
-    parser = argparse.ArgumentParser(description="Weather search by ZIP"
-                                     " (Manager)")
-
-    parser.add_argument('inputs', nargs='+', help='CSV input file(s) name')
-    parser.add_argument("--config", type=str, dest="config",
-                        default=DEFAULT_CONFIG_FILE,
-                        help="Default configuration file"
-                        " (default: {0!s})".format(DEFAULT_CONFIG_FILE))
-    parser.add_argument("-o", "--out", type=str, dest="outfile",
-                        default=DEF_OUTPUT_FILE,
-                        help="Search results in CSV (default: {0:s})"
-                        .format(DEF_OUTPUT_FILE))
-    parser.add_argument('-v', '--verbose', dest='verbose',
-                        action='store_true',
-                        help="Verbose message")
-    parser.set_defaults(verbose=False)
-
-    return parser.parse_args()
+def setup_logging(verbose: bool = False, log_file: str = LOG_FILE) -> None:
+    """Set up logging with console and file handlers."""
+    level = logging.DEBUG if verbose else logging.INFO
+    logging.basicConfig(
+        level=level,
+        format="%(asctime)s - %(levelname)s - %(message)s",
+        handlers=[
+            logging.StreamHandler(),
+            RotatingFileHandler(log_file, maxBytes=10_000_000, backupCount=3),
+        ],
+    )
 
 
-def load_config(args=None):
-    if args is None or isinstance(args, basestring):
-        namespace = argparse.Namespace()
-        if args is None:
-            if os.path.exists(CONFIG_FILE_NAME):
-                namespace.config = CONFIG_FILE_NAME
-            else:
-                namespace.config = DEFAULT_CONFIG_FILE
-        else:
-            namespace.config = args
-        args = namespace
-    try:
-        config = ConfigParser()
-        config.read(args.config)
-        args.ip = config.get('manager', 'ip')
-        args.port = config.getint('manager', 'port')
-        args.authkey = config.get('manager', 'authkey')
-        args.batch_size = config.getint('manager', 'batch_size')
-        args.columns = config.get('output', 'columns')
-    except Exception as e:
-        logging.error(str(e))
+class Queue(_Queue):  # type: ignore[type-arg]
+    """A picklable queue."""
 
-    return args
-
-
-class Queue(_Queue):
-    """ A picklable queue. """
-    def __getstate__(self):
-        # Only pickle the state we care about
+    def __getstate__(self) -> tuple[int, Any, int]:
         return (self.maxsize, self.queue, self.unfinished_tasks)
 
-    def __setstate__(self, state):
-        # Re-initialize the object, then overwrite the default state with
-        # our pickled state.
+    def __setstate__(self, state: tuple[int, Any, int]) -> None:
         Queue.__init__(self)
         self.maxsize = state[0]
         self.queue = state[1]
         self.unfinished_tasks = state[2]
 
 
-def get_q(q):
+def get_q(q: Queue) -> Queue:
+    """Return the queue."""
     return q
 
+
 class JobQueueManager(SyncManager):
+    """Manager for job queues."""
+
     pass
 
 
-def make_server_manager(ip, port, authkey):
-    """ Create a manager for the server, listening on the given port.
-        Return a manager object with get_job_q and get_result_q methods.
-    """
+def make_server_manager(ip: str, port: int, authkey: bytes) -> JobQueueManager:
+    """Create a manager for the server, listening on the given port."""
+    job_q: Queue = Queue()
+    result_q: Queue = Queue()
 
-    job_q = Queue()
-    result_q = Queue()
-
-    JobQueueManager.register('get_job_q', callable=partial(get_q, job_q))
-    JobQueueManager.register('get_result_q', callable=partial(get_q, result_q))
+    JobQueueManager.register("get_job_q", callable=partial(get_q, job_q))
+    JobQueueManager.register("get_result_q", callable=partial(get_q, result_q))
 
     manager = JobQueueManager(address=(ip, port), authkey=authkey)
     manager.start()
-    logging.info('Manager started at port {:d}'.format(port))
+    logging.info(f"Manager started at port {port:d}")
     return manager
 
 
-def run_manager(args):
-    # Start a shared manager server and access its queues
-    manager = make_server_manager(args.ip, args.port, args.authkey)
-    shared_job_q = manager.get_job_q()
-    shared_result_q = manager.get_result_q()
+def load_config(config_file: str) -> dict[str, Any]:
+    """Load configuration from file."""
+    config = ConfigParser()
+    config.read(config_file)
 
+    return {
+        "ip": config.get("manager", "ip"),
+        "port": config.getint("manager", "port"),
+        "authkey": config.get("manager", "authkey").encode(),
+        "batch_size": config.getint("manager", "batch_size"),
+        "columns": config.get("output", "columns"),
+    }
+
+
+def run_manager(
+    inputs: tuple[str, ...],
+    outfile: str,
+    config: dict[str, Any],
+) -> None:
+    """Run the manager."""
+    manager = make_server_manager(config["ip"], config["port"], config["authkey"])
+    shared_job_q = manager.get_job_q()  # type: ignore[attr-defined]
+    shared_result_q = manager.get_result_q()  # type: ignore[attr-defined]
+
+    columns_file = config["columns"]
     try:
-        with open(args.columns, 'rb') as f:
-            output_columns = [r.strip() for r in f.readlines() if r[0] != '#']
-    except:
-        args.columns = resource_filename(__name__, args.columns)
-        with open(args.columns, 'rb') as f:
-            output_columns = [r.strip() for r in f.readlines() if r[0] != '#']
+        with open(columns_file, "r", encoding="utf-8") as f:
+            output_columns = [r.strip() for r in f.readlines() if r[0] != "#"]
+    except FileNotFoundError:
+        columns_path = str(files(__package__) / config["columns"])
+        with open(columns_path, "r", encoding="utf-8") as f:
+            output_columns = [r.strip() for r in f.readlines() if r[0] != "#"]
 
-    outfile = open(args.outfile, 'wb')
-    writer = csv.DictWriter(outfile, fieldnames=['uniqid', 'zip', 'year',
-                            'month', 'day'] + STATION_INFO_COLS +
-                            output_columns)
+    outfile_handle = open(outfile, "w", newline="", encoding="utf-8")
+    writer = csv.DictWriter(
+        outfile_handle,
+        fieldnames=["uniqid", "zip", "year", "month", "day"]
+        + STATION_INFO_COLS
+        + output_columns,
+    )
     writer.writeheader()
-    for infile in args.inputs:
-        with open(infile, 'rb') as csvfile:
+
+    for infile in inputs:
+        with open(infile, "r", newline="", encoding="utf-8") as csvfile:
             reader = csv.DictReader(csvfile)
-            if 'from.day' in reader.fieldnames:
-                args.extended = True
+            if reader.fieldnames and "from.day" in reader.fieldnames:
+                extended = True
             else:
-                args.extended = False
-            zips = []
+                extended = False
+            zips: list[dict[str, Any]] = []
             for r in reader:
-                data = {}
-                data['uniqid'] = r['uniqid']
-                data['zip'] = r['zip']
-                if args.extended:
-                    data['from.year'] = int(r['from.year'])
-                    data['from.month'] = int(r['from.month'])
-                    data['from.day'] = int(r['from.day'])
-                    data['to.year'] = int(r['to.year'])
-                    data['to.month'] = int(r['to.month'])
-                    data['to.day'] = int(r['to.day'])
+                data: dict[str, Any] = {}
+                data["uniqid"] = r["uniqid"]
+                data["zip"] = r["zip"]
+                if extended:
+                    data["from.year"] = int(r["from.year"])
+                    data["from.month"] = int(r["from.month"])
+                    data["from.day"] = int(r["from.day"])
+                    data["to.year"] = int(r["to.year"])
+                    data["to.month"] = int(r["to.month"])
+                    data["to.day"] = int(r["to.day"])
                 else:
-                    data['from.year'] = int(r['year'])
-                    data['from.month'] = int(r['month'])
-                    data['from.day'] = int(r['day'])
-                    data['to.year'] = int(r['year'])
-                    data['to.month'] = int(r['month'])
-                    data['to.day'] = int(r['day'])
+                    data["from.year"] = int(r["year"])
+                    data["from.month"] = int(r["month"])
+                    data["from.day"] = int(r["day"])
+                    data["to.year"] = int(r["year"])
+                    data["to.month"] = int(r["month"])
+                    data["to.day"] = int(r["day"])
                 zips.append(data)
         N = len(zips)
-        logging.info("Processing: '{:s}', total ZIP = {:d}".format(infile, N))
+        logging.info(f"Processing: '{infile:s}', total ZIP = {N:d}")
 
-        # The zips are split into chunks. Each chunk is pushed into the job
-        # queue.
-        chunksize = args.batch_size
+        chunksize = config["batch_size"]
         for i in range(0, len(zips), chunksize):
-            shared_job_q.put(zips[i:i + chunksize])
+            shared_job_q.put(zips[i : i + chunksize])
 
-        # Wait until all results are ready in shared_result_q
         numresults = 0
         while numresults < N:
             try:
@@ -189,28 +163,50 @@ def run_manager(args):
                     for v in outdict.values():
                         writer.writerows(v)
                     numresults += len(outdict)
-                    logging.info("Progress: {:d}/{:d}".format(numresults, N))
+                    logging.info(f"Progress: {numresults:d}/{N:d}")
                 else:
                     time.sleep(0.1)
             except KeyboardInterrupt:
                 break
-    # Sleep a bit before shutting down the server - to give clients time to
-    # realize the job queue is empty and exit in an orderly way.
     time.sleep(3)
     manager.shutdown()
-    outfile.close()
+    outfile_handle.close()
 
 
-def main(args=None):
-    if args is None:
-        args = parse_command_line()
+@click.command()
+@click.argument("inputs", nargs=-1, required=True)
+@click.option(
+    "--config",
+    default=DEFAULT_CONFIG_FILE,
+    help=f"Configuration file (default: {DEFAULT_CONFIG_FILE})",
+)
+@click.option(
+    "-o",
+    "--out",
+    default=DEF_OUTPUT_FILE,
+    help=f"Output CSV file (default: {DEF_OUTPUT_FILE})",
+)
+@click.option("-v", "--verbose", is_flag=True, help="Verbose output")
+def cli(inputs: tuple[str, ...], config: str, out: str, verbose: bool) -> None:
+    """Weather search by ZIP (Manager)."""
+    setup_logging(verbose)
+    console.print("[bold]Starting manager...[/bold]")
 
-    setup_logger(args.verbose)
+    if not os.path.exists(config):
+        console.print(f"[red]Config file not found: {config}[/red]")
+        raise SystemExit(1)
 
-    args = load_config(args)
-    logging.info(str(args))
+    cfg = load_config(config)
+    logging.info(f"Config: {cfg}")
 
-    run_manager(args)
+    run_manager(inputs, out, cfg)
+    console.print("[green]Manager completed.[/green]")
+
+
+def main() -> None:
+    """Main entry point."""
+    cli()
+
 
 if __name__ == "__main__":
     main()

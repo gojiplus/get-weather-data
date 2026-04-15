@@ -1,0 +1,106 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "get-weather-data"
+version = "0.2.0"
+description = "Scripts for finding out the weather in a particular zip code"
+readme = "README.rst"
+license = "MIT"
+authors = [
+    { name = "Suriyan Laohaprapanon", email = "suriyant@gmail.com" },
+    { name = "Gaurav Sood", email = "gsood07@gmail.com" },
+]
+keywords = ["weather", "zip", "cdo", "noaa", "climate", "stations"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Atmospheric Science",
+    "Typing :: Typed",
+]
+requires-python = ">=3.11"
+dependencies = [
+    "click>=8.1",
+    "rich>=13.0",
+    "httpx>=0.27",
+    "geopy>=2.4",
+]
+
+[project.optional-dependencies]
+fast = [
+    "scipy>=1.11",
+]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=4.0",
+    "pytest-mock>=3.12",
+    "respx>=0.21",
+    "black>=24.0",
+    "isort>=5.13",
+    "ruff>=0.4",
+    "mypy>=1.8",
+    "pydoclint>=0.4",
+    "vulture>=2.11",
+    "deptry>=0.16",
+]
+docs = [
+    "sphinx>=7.0",
+    "furo>=2024.0",
+    "sphinx-autodoc-typehints>=2.0",
+]
+
+[project.scripts]
+noaaweb = "noaaweb.noaaweb:main"
+zip2ws = "zip2ws.zip2ws:main"
+zip2wd-manager = "zip2wd.manager:main"
+zip2wd-worker = "zip2wd.worker:main"
+
+[project.urls]
+Homepage = "https://github.com/soodoku/get-weather-data"
+Repository = "https://github.com/soodoku/get-weather-data"
+Issues = "https://github.com/soodoku/get-weather-data/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["noaaweb", "zip2ws", "zip2wd", "ws2zip"]
+
+[tool.black]
+line-length = 88
+target-version = ["py311"]
+
+[tool.isort]
+profile = "black"
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+
+[[tool.mypy.overrides]]
+module = ["scipy.*", "geopy.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short"
+
+[tool.pydoclint]
+style = "google"
+check-return-types = false
+
+[tool.vulture]
+min_confidence = 80
+paths = ["noaaweb", "zip2ws", "zip2wd", "ws2zip"]
+
+[tool.deptry]
+extend_exclude = ["tests"]

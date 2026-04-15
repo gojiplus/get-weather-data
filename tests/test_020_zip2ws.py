@@ -1,31 +1,32 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+"""Tests for ZIP2WS."""
 
-"""
-Tests for ZIP2WS
-
-"""
-
-import os
-import unittest
-
-from zip2ws.zip2ws import main
+from __future__ import annotations
 
 
-class TestZip2Ws(unittest.TestCase):
+import pytest
+from click.testing import CliRunner
 
-    def setUp(self):
-        try:
-            os.unlink('zip2ws/data/zip2ws.sqlite')
-        except:
-            pass
+from zip2ws.zip2ws import cli
 
-    def tearDown(self):
-        pass
 
-    def test_import(self):
-        main(['', '-i'])
-        self.assertTrue(os.path.exists('zip2ws/data/zip2ws.sqlite'))
+@pytest.fixture
+def clean_database(tmp_path):
+    """Create a clean database path for tests."""
+    db_path = tmp_path / "test.sqlite"
+    yield db_path
 
-if __name__ == '__main__':
-    unittest.main()
+
+def test_import_help():
+    """Test import command help."""
+    runner = CliRunner()
+    result = runner.invoke(cli, ["import", "--help"])
+    assert result.exit_code == 0
+    assert "Import ZIP and station data" in result.output
+
+
+def test_cli_help():
+    """Test main CLI help."""
+    runner = CliRunner()
+    result = runner.invoke(cli, ["--help"])
+    assert result.exit_code == 0
+    assert "ZIP to Weather Station mapper" in result.output

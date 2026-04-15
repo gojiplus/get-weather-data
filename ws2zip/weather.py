@@ -1,76 +1,89 @@
+"""Weather station to ZIP lookup."""
 
+from __future__ import annotations
+
+import logging
 import re
-import geonames
 import time
+from typing import Any
 
-def slices(s, *args):
+from geopy.exc import GeocoderServiceError, GeocoderTimedOut
+from geopy.geocoders import Nominatim
+
+
+def slices(s: str, *args: int) -> Any:
+    """Yield slices of a string."""
     position = 0
     for length in args:
-        yield s[position:position + length]
+        yield s[position : position + length]
         position += length
 
-def load_save_csvfile(infilename, outfilename, source='ghcnd'):
-    reader = open(infilename, 'r')
+
+def get_zip_from_coords(lat: str, lng: str) -> list[str]:
+    """Get postal codes near the given coordinates using geopy."""
+    try:
+        geolocator = Nominatim(user_agent="get-weather-data")
+        location = geolocator.reverse(f"{lat}, {lng}", exactly_one=True)
+
+        if location and location.raw.get("address"):
+            postal_code = location.raw["address"].get("postcode", "")
+            if postal_code:
+                return [postal_code]
+        return []
+    except (GeocoderTimedOut, GeocoderServiceError) as e:
+        logging.warning(f"Geocoding failed for ({lat}, {lng}): {e}")
+        return []
+
+
+def load_save_csvfile(infilename: str, outfilename: str, source: str = "ghcnd") -> None:
+    """Load station data and save with ZIP codes."""
+    reader = open(infilename, "r", encoding="utf-8")
     total_rows = 0
     try:
-        writer = open(outfilename, 'r+', 1)
-        for row in writer:
+        writer = open(outfilename, "r+", encoding="utf-8")
+        for _ in writer:
             total_rows += 1
     except IOError:
-        writer = open(outfilename, 'w', 1)
-            
-    if source == 'ghcnd':
+        writer = open(outfilename, "w", encoding="utf-8")
+
+    if source == "ghcnd":
         prog = re.compile(".{11}(.{9})(.{10})")
-    elif source == 'coop':
+    elif source == "coop":
         prog = re.compile(".{191}(.{16})(.{16})")
-        
+    else:
+        prog = re.compile(".{11}(.{9})(.{10})")
+
     j = -1
     for row in reader:
         j += 1
         if j < total_rows:
-            continue        
-        
+            continue
+
         match = prog.match(row)
+        if match is None:
+            continue
         lat, lng = match.group(1, 2)
-        
+
         lat = lat.strip()
         lng = lng.strip()
-        result=geonames.findNearbyPostalCodes(lat=lat, lng=lng, country='US', maxRows=5)
-        i = 0
-        index = 0
-        indexes = []
+
+        result = get_zip_from_coords(lat, lng)
+
+        out = row.rstrip("\n")
+        for postal_code in result:
+            out = out + f"{postal_code:>10}"
+
         if result:
-            try:
-                min_distance = float(result[0]['distance'])
-            except:
-                print 'Get limitation'
-                break
-            
-            for r in result:
-                distance = float(r['distance'])
-                if min_distance > distance:
-                    index = i
-                    min_distance = distance
-                    indexes = [index]
-                elif min_distance == distance:
-                    indexes.append(i)
-                i += 1
-            
-        out = row.rstrip('\n')
-        merge = {result[index]['postalCode'] for index in indexes}
-        for m in merge:
-            out = out + '{:>10}'.format(m)
-            
-        if indexes:
-            out += '{:>15}'.format(min_distance)
-        out += '\n'
-        out = '{:<20}'.format(source) + out
-        print out
+            out += f"{0.0:>15}"
+        out += "\n"
+        out = f"{source:<20}" + out
+        print(out)
         writer.write(out)
         time.sleep(1)
-            
+
     reader.close()
     writer.close()
 
-#load_save_csvfile('ghcnd-stations.txt', 'ghcnd-stations-out.txt', source='ghcnd')
-load_save_csvfile('coop-stations.txt', 'coop-stations-out.txt', source='coop')
+
+if __name__ == "__main__":
+    load_save_csvfile("coop-stations.txt", "coop-stations-out.txt", source="coop")

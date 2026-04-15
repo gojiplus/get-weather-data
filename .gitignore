@@ -1,7 +1,31 @@
-!.gitignore
 *.pyc
 *.log
-!.pep8speaks.yml
+*.egg-info/
 output.csv
 dev/
 .DS_Store
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Build artifacts
+dist/
+build/
+
+# Coverage
+.coverage
+htmlcov/
+
+# Type checking
+.mypy_cache/
+
+# Testing
+.pytest_cache/
+
+# Documentation
+docs/_build/
+
+# uv
+uv.lock

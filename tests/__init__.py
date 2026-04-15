@@ -1,15 +1,20 @@
+"""Test utilities."""
+
+from __future__ import annotations
+
 import sys
 from contextlib import contextmanager
-try:
-    from StringIO import StringIO
-except:
-    from io import StringIO
+from io import StringIO
+from typing import Any, Generator
 
 
 @contextmanager
-def capture(command, *args, **kwargs):
+def capture(command: Any, *args: Any, **kwargs: Any) -> Generator[str, None, None]:
+    """Capture stdout from a command execution."""
     out, sys.stdout = sys.stdout, StringIO()
-    command(*args, **kwargs)
-    sys.stdout.seek(0)
-    yield sys.stdout.read()
-    sys.stdout = out
+    try:
+        command(*args, **kwargs)
+        sys.stdout.seek(0)
+        yield sys.stdout.read()
+    finally:
+        sys.stdout = out
