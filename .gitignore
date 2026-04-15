@@ -4,3 +4,4 @@
 !.pep8speaks.yml
 output.csv
 dev/
+.DS_Store
