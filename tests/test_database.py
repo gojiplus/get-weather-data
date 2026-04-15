@@ -1,6 +1,5 @@
 """Tests for database operations."""
 
-
 from get_weather_data.core.database import Database
 from get_weather_data.core.distance import Station
 

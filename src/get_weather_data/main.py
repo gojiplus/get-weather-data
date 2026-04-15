@@ -44,7 +44,7 @@ class Weather:
         setup_logging(verbose=self.verbose)
 
         if self.database_path:
-            config = Config(database_path=Path(self.database_path))
+            config = Config(_database_path=Path(self.database_path))
             set_config(config)
 
         self._db = Database(self.database_path)

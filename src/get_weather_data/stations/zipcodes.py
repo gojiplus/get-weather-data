@@ -42,7 +42,7 @@ def download_zipcodes(output_dir: Path | None = None) -> Path:
     return output_file
 
 
-def parse_zipcodes(file_path: Path) -> list[dict[str, str | float]]:
+def parse_zipcodes(file_path: Path) -> list[dict]:
     """Parse GeoNames US.txt file.
 
     Tab-separated format:

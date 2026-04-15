@@ -148,7 +148,7 @@ def get_ghcn_data_range(
     start_date: date,
     end_date: date,
     elements: list[str] | None = None,
-) -> list[dict[str, date | dict[str, float | None]]]:
+) -> list[dict]:
     """Get GHCN data for a station over a date range.
 
     Args:

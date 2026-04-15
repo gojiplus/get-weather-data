@@ -22,7 +22,7 @@ class Config:
     config_dir: Path = field(default_factory=lambda: _XDG_CONFIG_HOME / APP_NAME)
 
     # Database
-    database_path: Path | None = None
+    _database_path: Path | None = None
 
     # Station settings
     ghcn_station_count: int = 3
@@ -37,15 +37,24 @@ class Config:
 
     def __post_init__(self) -> None:
         """Set up derived paths and load environment variables."""
-        if self.database_path is None:
-            self.database_path = self.data_dir / "weather.db"
-
         if self.ncdc_token is None:
             self.ncdc_token = os.environ.get("NCDC_TOKEN")
 
         # Ensure directories exist
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
+
+    @property
+    def database_path(self) -> Path:
+        """Path to the SQLite database."""
+        if self._database_path is not None:
+            return self._database_path
+        return self.data_dir / "weather.db"
+
+    @database_path.setter
+    def database_path(self, value: Path | None) -> None:
+        """Set database path."""
+        self._database_path = value
 
     @property
     def ghcn_cache_dir(self) -> Path:

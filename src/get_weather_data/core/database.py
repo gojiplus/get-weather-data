@@ -22,8 +22,10 @@ class Database:
             path: Path to SQLite database. If None, uses config default.
         """
         if path is None:
-            path = get_config().database_path
-        self.path = Path(path)
+            db_path = get_config().database_path
+        else:
+            db_path = Path(path)
+        self.path = db_path
         self._conn: sqlite3.Connection | None = None
 
     @contextmanager

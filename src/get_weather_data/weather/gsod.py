@@ -140,7 +140,7 @@ def get_gsod_data_range(
     start_date: date,
     end_date: date,
     convert_units: bool = True,
-) -> list[dict[str, date | dict[str, float | None]]]:
+) -> list[dict]:
     """Get GSOD data for a station over a date range.
 
     Args:
