@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "get-weather-data"
 version = "3.0.0"
 description = "Get historical weather data for US ZIP codes from NOAA stations"
-readme = "README.rst"
+readme = "README.md"
 license = "MIT"
 authors = [
     { name = "Suriyan Laohaprapanon", email = "suriyant@gmail.com" },
