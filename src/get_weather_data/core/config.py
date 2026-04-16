@@ -24,9 +24,9 @@ class Config:
     # Database
     _database_path: Path | None = None
 
-    # Station settings
-    ghcn_station_count: int = 3
-    usaf_station_count: int = 2
+    # Station settings (more stations = better fallback coverage)
+    ghcn_station_count: int = 5
+    usaf_station_count: int = 3
     coop_station_count: int = 0
 
     # API settings

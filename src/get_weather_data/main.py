@@ -83,13 +83,13 @@ class Weather:
             zipcodes: Import ZIP code data.
             closest_index: Build closest stations index.
         """
+        self.db.init_schema()
+
         if self.db.exists() and not force:
             # Check if already set up
             if self.db.count_stations() > 0 and self.db.count_zipcodes() > 0:
                 logger.info("Database already set up. Use force=True to rebuild.")
                 return
-
-        self.db.init_schema()
 
         if ghcn_stations:
             logger.info("Importing GHCN stations...")
@@ -166,6 +166,8 @@ class Weather:
         year_column: str | int | None = "year",
         month_column: str | int | None = "month",
         day_column: str | int | None = "day",
+        parallel: bool = True,
+        max_workers: int | None = None,
     ) -> int:
         """Process a CSV file and add weather data.
 
@@ -177,6 +179,8 @@ class Weather:
             year_column: Column for year (if no date_column).
             month_column: Column for month (if no date_column).
             day_column: Column for day (if no date_column).
+            parallel: Use parallel processing for faster execution.
+            max_workers: Number of worker threads (default: CPU count, max 8).
 
         Returns:
             Number of rows processed.
@@ -190,6 +194,8 @@ class Weather:
             month_column=month_column,
             day_column=day_column,
             db=self.db,
+            parallel=parallel,
+            max_workers=max_workers,
         )
 
     def info(self) -> dict[str, int]:

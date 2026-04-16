@@ -2,6 +2,9 @@
 
 import csv
 import logging
+import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 
@@ -9,6 +12,16 @@ from get_weather_data.core.database import Database
 from get_weather_data.weather.lookup import WeatherLookup, WeatherResult
 
 logger = logging.getLogger("get_weather_data")
+
+
+@dataclass
+class _Row:
+    """Internal row representation for parallel processing."""
+
+    index: int
+    data: dict[str, str]
+    zipcode: str
+    target_date: date | None
 
 
 def process_csv(
@@ -20,11 +33,10 @@ def process_csv(
     month_column: str | int | None = "month",
     day_column: str | int | None = "day",
     db: Database | None = None,
+    parallel: bool = True,
+    max_workers: int | None = None,
 ) -> int:
     """Process a CSV file and add weather data.
-
-    The input CSV must contain a ZIP code column. Dates can be specified either
-    as a single date column or as separate year/month/day columns.
 
     Args:
         input_path: Path to input CSV file.
@@ -35,6 +47,8 @@ def process_csv(
         month_column: Column name or index for month.
         day_column: Column name or index for day.
         db: Database instance. Uses default if None.
+        parallel: Use parallel processing for faster execution.
+        max_workers: Number of worker threads (default: CPU count).
 
     Returns:
         Number of rows processed.
@@ -44,6 +58,9 @@ def process_csv(
 
     if db is None:
         db = Database()
+
+    if max_workers is None:
+        max_workers = min(os.cpu_count() or 4, 8)
 
     lookup = WeatherLookup(db=db)
 
@@ -61,44 +78,62 @@ def process_csv(
         "awnd",
     ]
 
-    rows_processed = 0
-
     with open(input_path, "r", encoding="utf-8", errors="replace") as infile:
         reader = csv.DictReader(infile)
         fieldnames = list(reader.fieldnames or []) + weather_columns
+        rows = list(reader)
 
-        with open(output_path, "w", encoding="utf-8", newline="") as outfile:
-            writer = csv.DictWriter(outfile, fieldnames=fieldnames)
-            writer.writeheader()
+    total_rows = len(rows)
+    logger.info(f"Processing {total_rows} rows...")
 
-            for row in reader:
-                zipcode = _get_column(row, zipcode_column)
-                if not zipcode:
-                    logger.warning(f"Missing ZIP code in row {rows_processed + 1}")
-                    writer.writerow(row)
-                    rows_processed += 1
-                    continue
+    parsed_rows = []
+    for i, row in enumerate(rows):
+        zipcode = _get_column(row, zipcode_column)
+        target_date = _parse_date(
+            row, date_column, year_column, month_column, day_column
+        )
+        parsed_rows.append(
+            _Row(index=i, data=row, zipcode=zipcode, target_date=target_date)
+        )
 
-                target_date = _parse_date(
-                    row, date_column, year_column, month_column, day_column
-                )
-                if target_date is None:
-                    logger.warning(f"Missing date in row {rows_processed + 1}")
-                    writer.writerow(row)
-                    rows_processed += 1
-                    continue
+    results: list[tuple[int, dict[str, str], WeatherResult | None]] = []
 
-                result = lookup.get_weather(zipcode, target_date)
+    def process_row(
+        parsed_row: _Row,
+    ) -> tuple[int, dict[str, str], WeatherResult | None]:
+        if not parsed_row.zipcode or parsed_row.target_date is None:
+            return (parsed_row.index, parsed_row.data, None)
+        result = lookup.get_weather(parsed_row.zipcode, parsed_row.target_date)
+        return (parsed_row.index, parsed_row.data, result)
 
-                row.update(_result_to_dict(result))
-                writer.writerow(row)
+    if parallel and total_rows > 10:
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {executor.submit(process_row, row): row for row in parsed_rows}
+            completed = 0
+            for future in as_completed(futures):
+                results.append(future.result())
+                completed += 1
+                if completed % 1000 == 0:
+                    logger.info(f"Processed {completed}/{total_rows} rows...")
+    else:
+        for i, parsed_row in enumerate(parsed_rows):
+            results.append(process_row(parsed_row))
+            if (i + 1) % 1000 == 0:
+                logger.info(f"Processed {i + 1}/{total_rows} rows...")
 
-                rows_processed += 1
-                if rows_processed % 1000 == 0:
-                    logger.info(f"Processed {rows_processed} rows...")
+    results.sort(key=lambda x: x[0])
 
-    logger.info(f"Processed {rows_processed} rows total")
-    return rows_processed
+    with open(output_path, "w", encoding="utf-8", newline="") as outfile:
+        writer = csv.DictWriter(outfile, fieldnames=fieldnames)
+        writer.writeheader()
+
+        for _, row_data, weather_result in results:
+            if weather_result:
+                row_data.update(_result_to_dict(weather_result))
+            writer.writerow(row_data)
+
+    logger.info(f"Processed {total_rows} rows total")
+    return total_rows
 
 
 def _get_column(row: dict[str, str], column: str | int) -> str:

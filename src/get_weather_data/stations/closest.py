@@ -4,7 +4,7 @@ import logging
 
 from get_weather_data.core.config import get_config
 from get_weather_data.core.database import Database
-from get_weather_data.core.distance import find_closest
+from get_weather_data.core.distance import StationIndex
 
 logger = logging.getLogger("get_weather_data")
 
@@ -41,6 +41,11 @@ def build_closest_index(
         f"Loaded {len(ghcn_stations)} GHCND, {len(usaf_stations)} USAF stations"
     )
 
+    # Build spatial indexes ONCE (key optimization!)
+    ghcn_index = StationIndex(ghcn_stations)
+    usaf_index = StationIndex(usaf_stations)
+    logger.info("Built spatial indexes")
+
     # Get all ZIP codes
     zipcodes = db.execute(
         "SELECT zipcode, lat, lon FROM zipcodes WHERE lat IS NOT NULL"
@@ -55,15 +60,15 @@ def build_closest_index(
 
         closest_stations = []
 
-        # Find closest GHCND stations
+        # Find closest GHCND stations (O(log n) with pre-built index)
         if ghcn_count > 0:
-            ghcn_closest = find_closest(lat, lon, ghcn_stations, n=ghcn_count)
+            ghcn_closest = ghcn_index.find_closest(lat, lon, n=ghcn_count)
             for sd in ghcn_closest:
                 closest_stations.append((sd.station.id, sd.distance_meters))
 
-        # Find closest USAF stations
+        # Find closest USAF stations (O(log n) with pre-built index)
         if usaf_count > 0:
-            usaf_closest = find_closest(lat, lon, usaf_stations, n=usaf_count)
+            usaf_closest = usaf_index.find_closest(lat, lon, n=usaf_count)
             for sd in usaf_closest:
                 closest_stations.append((sd.station.id, sd.distance_meters))
 

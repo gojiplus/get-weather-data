@@ -3,6 +3,7 @@
 import logging
 from dataclasses import dataclass, field
 from datetime import date, timedelta
+from functools import lru_cache
 
 from get_weather_data.core.database import Database
 from get_weather_data.core.distance import find_closest
@@ -31,15 +32,40 @@ class WeatherResult:
     awnd: float | None = None
 
 
+@lru_cache(maxsize=1024)
+def _cached_ghcn_data(
+    station_id: str, year: int, month: int, day: int
+) -> dict[str, float | None]:
+    """Cached GHCN data lookup."""
+    return get_ghcn_data(station_id, date(year, month, day))
+
+
+@lru_cache(maxsize=1024)
+def _cached_gsod_data(
+    station_id: str, year: int, month: int, day: int
+) -> dict[str, float | None]:
+    """Cached GSOD data lookup."""
+    return get_gsod_data(station_id, date(year, month, day))
+
+
 @dataclass
 class WeatherLookup:
-    """Look up weather data for ZIP codes."""
+    """Look up weather data for ZIP codes.
+
+    Uses caching for improved performance on repeated queries.
+    """
 
     db: Database = field(default_factory=Database)
-    max_stations: int = 5
+    max_stations: int = 10  # Try more stations before giving up (fallback)
     max_distance_meters: int | None = None
     use_ghcn: bool = True
     use_gsod: bool = True
+    use_cache: bool = True
+
+    def __post_init__(self) -> None:
+        """Preload caches for efficiency."""
+        if self.db.exists():
+            self.db.preload_caches()
 
     def get_weather(
         self,
@@ -95,18 +121,32 @@ class WeatherLookup:
             if elements and len(found_elements) >= len(elements):
                 break
 
-            stations = self.db.execute(
-                "SELECT name, type FROM stations WHERE id = ?", (station_id,)
-            )
-            if not stations:
+            station_info = self.db.get_station_info(station_id)
+            if not station_info:
                 continue
 
-            station_name, station_type = stations[0]
+            station_name, station_type = station_info
 
             if station_type == "GHCND" and self.use_ghcn:
-                data = get_ghcn_data(station_id, target_date, elements)
+                if self.use_cache:
+                    data = _cached_ghcn_data(
+                        station_id,
+                        target_date.year,
+                        target_date.month,
+                        target_date.day,
+                    )
+                else:
+                    data = get_ghcn_data(station_id, target_date, elements)
             elif station_type == "USAF-WBAN" and self.use_gsod:
-                gsod_data = get_gsod_data(station_id, target_date)
+                if self.use_cache:
+                    gsod_data = _cached_gsod_data(
+                        station_id,
+                        target_date.year,
+                        target_date.month,
+                        target_date.day,
+                    )
+                else:
+                    gsod_data = get_gsod_data(station_id, target_date)
                 data = {
                     "TMAX": gsod_data.get("max_temp"),
                     "TMIN": gsod_data.get("min_temp"),
@@ -164,3 +204,15 @@ class WeatherLookup:
             results.append(self.get_weather(zipcode, current, elements))
             current += timedelta(days=1)
         return results
+
+    def clear_cache(self) -> None:
+        """Clear the weather data cache."""
+        _cached_ghcn_data.cache_clear()
+        _cached_gsod_data.cache_clear()
+
+    def cache_info(self) -> dict:
+        """Get cache statistics."""
+        return {
+            "ghcn": _cached_ghcn_data.cache_info(),
+            "gsod": _cached_gsod_data.cache_info(),
+        }

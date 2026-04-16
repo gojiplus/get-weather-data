@@ -131,6 +131,8 @@ def get(ctx: click.Context, zipcode: str, target_date: str) -> None:
 @click.option("--year-column", default="year", help="Year column name")
 @click.option("--month-column", default="month", help="Month column name")
 @click.option("--day-column", default="day", help="Day column name")
+@click.option("--parallel/--no-parallel", default=True, help="Use parallel processing")
+@click.option("--workers", type=int, help="Number of worker threads (default: auto)")
 @click.pass_context
 def process(
     ctx: click.Context,
@@ -141,6 +143,8 @@ def process(
     year_column: str,
     month_column: str,
     day_column: str,
+    parallel: bool,
+    workers: int | None,
 ) -> None:
     """Process a CSV file and add weather data.
 
@@ -155,7 +159,8 @@ def process(
         verbose=ctx.obj["verbose"],
     )
 
-    console.print(f"[bold]Processing {input_file}...[/bold]")
+    mode = "parallel" if parallel else "sequential"
+    console.print(f"[bold]Processing {input_file} ({mode})...[/bold]")
 
     count = weather.process_csv(
         input_path=input_file,
@@ -165,6 +170,8 @@ def process(
         year_column=year_column if not date_column else None,
         month_column=month_column if not date_column else None,
         day_column=day_column if not date_column else None,
+        parallel=parallel,
+        max_workers=workers,
     )
 
     console.print(f"[green]Processed {count:,} rows[/green]")

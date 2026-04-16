@@ -2,7 +2,7 @@
 
 import math
 from dataclasses import dataclass
-from typing import Sequence, TypeVar
+from typing import Any, Sequence, TypeVar
 
 # Constants for distance calculation
 NAUTICAL_MILE_PER_LAT = 60.00721
@@ -70,6 +70,66 @@ class StationDistance:
 
 
 T = TypeVar("T")
+
+
+class StationIndex:
+    """Pre-built spatial index for fast nearest-neighbor queries.
+
+    Build once, query many times. Uses KDTree when scipy is available.
+    """
+
+    def __init__(self, stations: Sequence[Station]) -> None:
+        """Build the spatial index from a list of stations."""
+        self.stations = [s for s in stations if s.lat is not None and s.lon is not None]
+        self._tree: Any = None
+        if KDTREE_AVAILABLE and self.stations:
+            coords = np.array([(s.lat, s.lon) for s in self.stations])
+            self._tree = cKDTree(coords)
+
+    def find_closest(
+        self,
+        lat: float,
+        lon: float,
+        n: int,
+        max_distance_km: float | None = None,
+    ) -> list[StationDistance]:
+        """Query the pre-built index for closest stations.
+
+        Args:
+            lat: Latitude of reference point.
+            lon: Longitude of reference point.
+            n: Maximum number of stations to return.
+            max_distance_km: Maximum distance in kilometers.
+
+        Returns:
+            List of StationDistance objects, sorted by distance.
+        """
+        if not self.stations:
+            return []
+
+        if self._tree is not None:
+            k = min(n, len(self.stations))
+            distances, indices = self._tree.query([lat, lon], k=k)
+
+            # Handle single result case
+            if isinstance(distances, float):
+                distances = [distances]
+                indices = [indices]
+
+            results = []
+            for dist_deg, idx in zip(distances, indices):
+                station = self.stations[idx]
+                dist_m = int(dist_deg * 111000)
+
+                if max_distance_km is not None and dist_m > max_distance_km * 1000:
+                    break
+
+                results.append(StationDistance(station=station, distance_meters=dist_m))
+
+            return results
+
+        # Fallback to brute force
+        return _find_closest_brute(lat, lon, self.stations, n, max_distance_km)
 
 
 def find_closest(
