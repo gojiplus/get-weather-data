@@ -1,10 +1,11 @@
 # Get Weather Data
 
 [![PyPI Version](https://img.shields.io/pypi/v/get-weather-data.svg)](https://pypi.python.org/pypi/get-weather-data)
+[![CI](https://github.com/gojiplus/get-weather-data/actions/workflows/ci.yml/badge.svg)](https://github.com/gojiplus/get-weather-data/actions/workflows/ci.yml)
 [![Downloads](https://pepy.tech/badge/get-weather-data)](https://pepy.tech/project/get-weather-data)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://soodoku.github.io/get-weather-data/)
+[![Docs](https://github.com/gojiplus/get-weather-data/actions/workflows/docs.yml/badge.svg)](https://gojiplus.github.io/get-weather-data/)
 
 Get historical weather data for US ZIP codes. Uses NOAA weather station data (GHCN Daily and GSOD) with automatic station selection based on proximity.
 

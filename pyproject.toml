@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "get-weather-data"
-version = "3.2.0"
+version = "3.2.3"
 description = "Get historical weather data for US ZIP codes from NOAA stations"
 readme = "README.md"
 license = "MIT"
