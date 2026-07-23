@@ -37,22 +37,6 @@ dynamic = ["version"]
 fast = [
     "scipy>=1.11",
 ]
-dev = [
-    "pytest>=8.0",
-    "pytest-cov>=4.0",
-    "pytest-mock>=3.12",
-    "respx>=0.21",
-    "black>=24.0",
-    "isort>=5.13",
-    "ruff>=0.4",
-    "mypy>=1.8",
-]
-docs = [
-    "sphinx>=7.0",
-    "furo>=2024.0",
-    "sphinx-autodoc-typehints>=2.0",
-    "myst-parser>=3.0",
-]
 
 [project.scripts]
 get-weather = "get_weather_data.cli:main"
@@ -123,4 +107,23 @@ vcs = "git"
 style = "pep440"
 
 [dependency-groups]
-docs = ["sphinx>=8", "furo", "myst-parser", "sphinx-copybutton", "py-canon @ git+https://github.com/gojiplus/py-canon@v1"]
+dev = [
+    "ruff>=0.14",
+    "pyright>=1.1.390",
+    "pydoclint>=0.5",
+    "pre-commit>=4",
+    { include-group = "test" },
+]
+test = [
+    "pytest>=8",
+    "pytest-cov>=6",
+    "pytest-mock>=3.12",
+    "respx>=0.21",
+]
+docs = [
+    "sphinx>=8",
+    "furo",
+    "myst-parser",
+    "sphinx-copybutton",
+    "py-canon @ git+https://github.com/gojiplus/py-canon@v1",
+]
