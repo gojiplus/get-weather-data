@@ -1,0 +1,12 @@
+# Managed by copier — records template version for `copier update`. Do not edit.
+_commit: v1
+_src_path: gh:gojiplus/py-canon
+author_email: suriyant@gmail.com
+author_name: Suriyan Laohaprapanon
+coverage_floor: 0
+default_branch: master
+description: Get historical weather data for US ZIP codes from NOAA stations
+needs_cli: true
+org: gojiplus
+package_name: get_weather_data
+project_name: get-weather-data

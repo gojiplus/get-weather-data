@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from datetime import date
 
 import httpx
+from defusedxml.ElementTree import fromstring as _defused_fromstring
 
 from get_weather_data.core.config import get_config
 
@@ -29,13 +30,15 @@ class NOAAClient:
     retry_delay: float = 5.0
 
     def __post_init__(self) -> None:
+        """Fill the token from config and validate it."""
         if self.token is None:
             config = get_config()
             self.token = config.ncdc_token
 
         if not self.token:
             raise ValueError(
-                "NCDC token required. Get one at https://www.ncdc.noaa.gov/cdo-web/token "
+                "NCDC token required. Get one at "
+                "https://www.ncdc.noaa.gov/cdo-web/token "
                 "and set NCDC_TOKEN environment variable."
             )
 
@@ -48,7 +51,7 @@ class NOAAClient:
             with httpx.Client(timeout=self.timeout) as client:
                 response = client.get(uri)
                 response.raise_for_status()
-                root = ET.fromstring(response.content)
+                root = _defused_fromstring(response.content)
 
             if root.tag == "cdoError":
                 name_elem = root.find("name")
@@ -113,9 +116,13 @@ class NOAAClient:
             if station_elem is not None and station_elem.text == station_id:
                 data_type_elem = elem.find("dataType")
                 value_elem = elem.find("value")
-                if data_type_elem is not None and value_elem is not None:
-                    if data_type_elem.text and value_elem.text:
-                        result[data_type_elem.text] = value_elem.text
+                if (
+                    data_type_elem is not None
+                    and value_elem is not None
+                    and data_type_elem.text
+                    and value_elem.text
+                ):
+                    result[data_type_elem.text] = value_elem.text
 
         return result
 
@@ -157,18 +164,24 @@ class NOAAClient:
 
         for child in root:
             date_elem = child.find("date")
-            if date_elem is not None and date_elem.text:
-                if date_elem.text.startswith(date_prefix):
-                    data.append(child)
+            if (
+                date_elem is not None
+                and date_elem.text
+                and date_elem.text.startswith(date_prefix)
+            ):
+                data.append(child)
 
         for i in range(2, page_count + 1):
             paged_uri = f"{uri}&page={i}"
             paged_root = self._fetch_xml(paged_uri)
             for child in paged_root:
                 date_elem = child.find("date")
-                if date_elem is not None and date_elem.text:
-                    if date_elem.text.startswith(date_prefix):
-                        data.append(child)
+                if (
+                    date_elem is not None
+                    and date_elem.text
+                    and date_elem.text.startswith(date_prefix)
+                ):
+                    data.append(child)
 
         station_id = self._get_most_common_station(data)
         if not station_id:
@@ -183,10 +196,14 @@ class NOAAClient:
             if station_elem is not None and station_elem.text == station_id:
                 date_elem = elem.find("date")
                 value_elem = elem.find("value")
-                if date_elem is not None and date_elem.text:
-                    if value_elem is not None and value_elem.text:
-                        hour = int(date_elem.text[11:13])
-                        result[f"HPCP_{hour:02d}"] = value_elem.text
+                if (
+                    date_elem is not None
+                    and date_elem.text
+                    and value_elem is not None
+                    and value_elem.text
+                ):
+                    hour = int(date_elem.text[11:13])
+                    result[f"HPCP_{hour:02d}"] = value_elem.text
 
         return result
 

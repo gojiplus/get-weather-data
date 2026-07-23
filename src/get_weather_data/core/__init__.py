@@ -8,11 +8,11 @@ from get_weather_data.core.logging import setup_logging
 
 __all__ = [
     "Config",
-    "get_config",
     "Database",
-    "find_closest",
-    "meters_distance",
     "download",
     "download_and_extract",
+    "find_closest",
+    "get_config",
+    "meters_distance",
     "setup_logging",
 ]

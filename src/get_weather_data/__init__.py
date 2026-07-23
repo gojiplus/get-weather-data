@@ -20,9 +20,14 @@ Basic usage:
     weather.process_csv("input.csv", "output.csv")
 """
 
+from importlib.metadata import PackageNotFoundError, version
+
 from get_weather_data.main import Weather
 
-__version__ = "3.0.0"
+try:
+    __version__ = version("get-weather-data")
+except PackageNotFoundError:
+    __version__ = "0.0.0"
 
 __all__ = [
     "Weather",

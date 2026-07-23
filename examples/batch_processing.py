@@ -83,10 +83,10 @@ def display_results(path: Path) -> None:
 
             if row["tmax"]:
                 tmax_c = float(row["tmax"]) / 10
-                print(f"  Max Temp: {tmax_c:.1f}°C ({tmax_c * 9/5 + 32:.1f}°F)")
+                print(f"  Max Temp: {tmax_c:.1f}°C ({tmax_c * 9 / 5 + 32:.1f}°F)")
             if row["tmin"]:
                 tmin_c = float(row["tmin"]) / 10
-                print(f"  Min Temp: {tmin_c:.1f}°C ({tmin_c * 9/5 + 32:.1f}°F)")
+                print(f"  Min Temp: {tmin_c:.1f}°C ({tmin_c * 9 / 5 + 32:.1f}°F)")
             if row["prcp"]:
                 print(f"  Precipitation: {float(row['prcp']) / 10:.1f} mm")
         else:

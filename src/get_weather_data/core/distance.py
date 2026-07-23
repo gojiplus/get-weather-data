@@ -1,8 +1,10 @@
 """Geographic distance calculations for get-weather-data."""
 
+import logging
 import math
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any, Sequence, TypeVar
+from typing import Any, TypeVar
 
 # Constants for distance calculation
 NAUTICAL_MILE_PER_LAT = 60.00721
@@ -13,13 +15,13 @@ METERS_PER_NAUTICAL_MILE = 1852
 # Try to import scipy for KDTree optimization
 try:
     import numpy as np
-    from scipy.spatial import cKDTree
+    from scipy.spatial import KDTree
 
     KDTREE_AVAILABLE = True
 except ImportError:
     KDTREE_AVAILABLE = False
     np = None  # type: ignore[assignment]
-    cKDTree = None  # type: ignore[assignment, misc]
+    KDTree = None  # type: ignore[assignment, misc]
 
 
 def meters_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -71,6 +73,8 @@ class StationDistance:
 
 T = TypeVar("T")
 
+logger = logging.getLogger("get_weather_data")
+
 
 class StationIndex:
     """Pre-built spatial index for fast nearest-neighbor queries.
@@ -82,9 +86,9 @@ class StationIndex:
         """Build the spatial index from a list of stations."""
         self.stations = [s for s in stations if s.lat is not None and s.lon is not None]
         self._tree: Any = None
-        if KDTREE_AVAILABLE and self.stations:
+        if self.stations and np is not None and KDTree is not None:
             coords = np.array([(s.lat, s.lon) for s in self.stations])
-            self._tree = cKDTree(coords)
+            self._tree = KDTree(coords)
 
     def find_closest(
         self,
@@ -117,7 +121,7 @@ class StationIndex:
                 indices = [indices]
 
             results = []
-            for dist_deg, idx in zip(distances, indices):
+            for dist_deg, idx in zip(distances, indices, strict=False):
                 station = self.stations[idx]
                 dist_m = int(dist_deg * 111000)
 
@@ -178,19 +182,20 @@ def _find_closest_kdtree(
     max_distance_km: float | None,
 ) -> list[StationDistance]:
     """Find closest stations using KDTree (scipy)."""
+    if np is None or KDTree is None:
+        raise RuntimeError("scipy is required for KDTree search")
     coords = np.array([(s.lat, s.lon) for s in stations])
-    tree = cKDTree(coords)
+    tree = KDTree(coords)
 
     k = len(stations) if n is None else min(n, len(stations))
-    distances, indices = tree.query([lat, lon], k=k)
+    raw_distances, raw_indices = tree.query([lat, lon], k=k)
 
-    # Handle single result case
-    if isinstance(distances, float):
-        distances = [distances]
-        indices = [indices]
+    # k=1 returns scalars; normalize to 1-d arrays
+    distances = [float(d) for d in np.atleast_1d(raw_distances)]
+    indices = [int(i) for i in np.atleast_1d(raw_indices)]
 
     results = []
-    for dist_deg, idx in zip(distances, indices):
+    for dist_deg, idx in zip(distances, indices, strict=False):
         station = stations[idx]
         # Convert degree distance to meters (approximate)
         dist_m = int(dist_deg * 111000)
@@ -217,6 +222,7 @@ def _find_closest_brute(
         try:
             dist = meters_distance(lat, lon, station.lat, station.lon)
         except Exception:
+            logger.debug("Skipping station %s: bad coordinates", station.id)
             continue
 
         if max_distance_km is not None and dist > max_distance_km * 1000:

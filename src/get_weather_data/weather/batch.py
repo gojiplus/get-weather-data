@@ -78,7 +78,7 @@ def process_csv(
         "awnd",
     ]
 
-    with open(input_path, "r", encoding="utf-8", errors="replace") as infile:
+    with open(input_path, encoding="utf-8", errors="replace") as infile:
         reader = csv.DictReader(infile)
         fieldnames = list(reader.fieldnames or []) + weather_columns
         rows = list(reader)
@@ -109,10 +109,8 @@ def process_csv(
     if parallel and total_rows > 10:
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = {executor.submit(process_row, row): row for row in parsed_rows}
-            completed = 0
-            for future in as_completed(futures):
+            for completed, future in enumerate(as_completed(futures), 1):
                 results.append(future.result())
-                completed += 1
                 if completed % 1000 == 0:
                     logger.info(f"Processed {completed}/{total_rows} rows...")
     else:

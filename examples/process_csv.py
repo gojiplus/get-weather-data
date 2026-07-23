@@ -44,5 +44,6 @@ with open(output_file) as f:
     reader = csv.DictReader(f)
     for row in reader:
         print(
-            f"ZIP {row['zip']}: {row['tmax']} tmax, {row['tmin']} tmin, station {row['station_id']}"
+            f"ZIP {row['zip']}: {row['tmax']} tmax, {row['tmin']} tmin, "
+            f"station {row['station_id']}"
         )

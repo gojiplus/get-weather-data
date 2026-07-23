@@ -3,9 +3,10 @@
 import logging
 import sqlite3
 import threading
+from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Generator
+from typing import Any
 
 from get_weather_data.core.config import get_config
 from get_weather_data.core.distance import Station
@@ -27,10 +28,7 @@ class Database:
         Args:
             path: Path to SQLite database. If None, uses config default.
         """
-        if path is None:
-            db_path = get_config().database_path
-        else:
-            db_path = Path(path)
+        db_path = get_config().database_path if path is None else Path(path)
         self.path = db_path
         self._station_cache: dict[str, tuple[str, str]] | None = None
         self._zipcode_cache: dict[str, tuple[float, float]] | None = None
@@ -138,7 +136,8 @@ class Database:
             return
         self._closest_cache = {}
         results = self.execute(
-            "SELECT zipcode, station_id, distance_meters FROM closest ORDER BY zipcode, distance_meters"
+            "SELECT zipcode, station_id, distance_meters FROM closest "
+            "ORDER BY zipcode, distance_meters"
         )
         for zipcode, station_id, distance in results:
             if zipcode not in self._closest_cache:

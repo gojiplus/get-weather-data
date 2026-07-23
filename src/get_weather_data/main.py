@@ -41,6 +41,7 @@ class Weather:
     _lookup: WeatherLookup | None = field(default=None, repr=False)
 
     def __post_init__(self) -> None:
+        """Configure logging and validate the selected dataset."""
         setup_logging(verbose=self.verbose)
 
         if self.database_path:
@@ -85,11 +86,14 @@ class Weather:
         """
         self.db.init_schema()
 
-        if self.db.exists() and not force:
-            # Check if already set up
-            if self.db.count_stations() > 0 and self.db.count_zipcodes() > 0:
-                logger.info("Database already set up. Use force=True to rebuild.")
-                return
+        if (
+            self.db.exists()
+            and not force
+            and self.db.count_stations() > 0
+            and self.db.count_zipcodes() > 0
+        ):
+            logger.info("Database already set up. Use force=True to rebuild.")
+            return
 
         if ghcn_stations:
             logger.info("Importing GHCN stations...")

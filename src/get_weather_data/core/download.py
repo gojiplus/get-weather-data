@@ -23,7 +23,7 @@ def download(url: str, output_path: Path | str, timeout: float = 120.0) -> Path:
 
     Raises:
         httpx.HTTPStatusError: If download fails.
-    """
+    """  # noqa: DOC502 - raised by raise_for_status()
     output_path = Path(output_path)
     logger.info(f"Downloading {url}...")
 
@@ -54,7 +54,7 @@ def download_and_extract(
     Raises:
         httpx.HTTPStatusError: If download fails.
         zipfile.BadZipFile: If file is not a valid zip.
-    """
+    """  # noqa: DOC502 - raised by raise_for_status()/ZipFile
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 

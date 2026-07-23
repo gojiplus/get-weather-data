@@ -90,7 +90,7 @@ def _ensure_ghcn_database(year: int) -> Path:
             c.executemany(
                 f"""INSERT OR IGNORE INTO ghcn_{year}
                     (id, date, element, value, m_flag, q_flag, s_flag, obs_time)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",  # noqa: S608 - int year
                 reader,
             )
         conn.commit()
@@ -124,13 +124,14 @@ def get_ghcn_data(
 
     date_str = target_date.strftime("%Y%m%d")
 
-    values: dict[str, float | None] = {e: None for e in elements}
+    values: dict[str, float | None] = dict.fromkeys(elements)
 
     conn = sqlite3.connect(db_path)
     try:
         c = conn.cursor()
         c.execute(
-            f"SELECT element, value FROM ghcn_{year} WHERE id = ? AND date = ?",
+            f"SELECT element, value FROM ghcn_{year} "  # noqa: S608 - int year
+            "WHERE id = ? AND date = ?",
             (station_id, date_str),
         )
         for row in c:
@@ -200,16 +201,16 @@ def get_ghcn_data_from_file(
         url = GHCN_STATION_URL.format(station_id=station_id)
         result = download_with_retry(url, dly_path)
         if result is None:
-            return {e: None for e in elements}
+            return dict.fromkeys(elements)
 
     year = target_date.year
     month = target_date.month
     day = target_date.day
 
     search_prefix = f"{station_id}{year:04d}{month:02d}"
-    values: dict[str, float | None] = {e: None for e in elements}
+    values: dict[str, float | None] = dict.fromkeys(elements)
 
-    with open(dly_path, "r", encoding="utf-8", errors="replace") as f:
+    with open(dly_path, encoding="utf-8", errors="replace") as f:
         for line in f:
             if line[:17] == search_prefix:
                 element = line[17:21]

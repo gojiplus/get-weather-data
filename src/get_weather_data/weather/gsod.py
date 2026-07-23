@@ -104,7 +104,7 @@ def get_gsod_data(
     date_str = target_date.strftime("%Y-%m-%d")
     values: dict[str, float | None] = {col[1]: None for col in GSOD_COLUMNS}
 
-    with open(file_path, "r", encoding="utf-8", errors="replace") as f:
+    with open(file_path, encoding="utf-8", errors="replace") as f:
         reader = csv.DictReader(f)
         for row in reader:
             if row.get("DATE") == date_str:

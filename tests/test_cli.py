@@ -20,7 +20,7 @@ class TestCli:
         runner = CliRunner()
         result = runner.invoke(cli, ["--version"])
         assert result.exit_code == 0
-        assert "3.0.0" in result.output
+        assert "version" in result.output
 
     def test_setup_help(self):
         """Test setup --help."""
