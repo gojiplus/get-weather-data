@@ -4,38 +4,32 @@ import csv
 import logging
 from pathlib import Path
 
+from get_weather_data.core.cache import ensure_fresh_download
 from get_weather_data.core.config import get_config
 from get_weather_data.core.database import Database
 from get_weather_data.core.distance import Station
-from get_weather_data.core.download import download_with_retry
 
 logger = logging.getLogger("get_weather_data")
 
 ISD_HISTORY_URL = "https://www.ncei.noaa.gov/pub/data/noaa/isd-history.csv"
 
 
-def download_isd_stations(output_path: Path | None = None) -> Path:
-    """Download ISD station history file.
+def download_isd_stations(output_path: Path | None = None, force: bool = False) -> Path:
+    """Download the ISD station history file (refreshes when stale).
 
     Args:
         output_path: Where to save the file. Uses cache dir if None.
+        force: Re-download even when the cached copy is fresh.
 
     Returns:
         Path to downloaded file.
 
     Raises:
         RuntimeError: If the download fails after retries.
-    """
+    """  # noqa: DOC502 - raised by ensure_fresh_download
     if output_path is None:
         output_path = get_config().stations_cache_dir / "isd-history.csv"
-
-    if (
-        not output_path.exists()
-        and download_with_retry(ISD_HISTORY_URL, output_path) is None
-    ):
-        raise RuntimeError(f"Failed to download {ISD_HISTORY_URL}")
-
-    return output_path
+    return ensure_fresh_download(ISD_HISTORY_URL, output_path, force=force)
 
 
 def parse_isd_stations(file_path: Path) -> list[Station]:
@@ -103,11 +97,12 @@ def parse_isd_stations(file_path: Path) -> list[Station]:
     return stations
 
 
-def import_isd_stations(db: Database | None = None) -> int:
+def import_isd_stations(db: Database | None = None, force: bool = False) -> int:
     """Download and import ISD stations to database.
 
     Args:
         db: Database instance. Uses default if None.
+        force: Re-download source files even when fresh.
 
     Returns:
         Number of stations imported.
@@ -116,7 +111,7 @@ def import_isd_stations(db: Database | None = None) -> int:
         db = Database()
 
     logger.info("Downloading ISD stations...")
-    file_path = download_isd_stations()
+    file_path = download_isd_stations(force=force)
 
     logger.info("Parsing ISD stations...")
     stations = parse_isd_stations(file_path)

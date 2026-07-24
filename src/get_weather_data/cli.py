@@ -212,7 +212,11 @@ def info(ctx: click.Context) -> None:
         verbose=ctx.obj["verbose"],
     )
 
-    stats = weather.info()
+    try:
+        stats = weather.info()
+    except RuntimeError as e:
+        console.print(f"[red]Error: {e}[/red]")
+        sys.exit(1)
 
     table = Table(title="Database Statistics")
     table.add_column("Item", style="cyan")
@@ -224,6 +228,53 @@ def info(ctx: click.Context) -> None:
     table.add_row("ZIP codes", f"{stats['zipcodes']:,}")
 
     console.print(table)
+
+
+@cli.group()
+def cache() -> None:
+    """Inspect or clear cached data files."""
+
+
+@cache.command("info")
+def cache_info_cmd() -> None:
+    """Show disk usage of each cache area."""
+    from get_weather_data.core.cache import cache_info
+
+    table = Table(title="Cache Usage")
+    table.add_column("Area", style="cyan")
+    table.add_column("Path")
+    table.add_column("Files", justify="right")
+    table.add_column("Size", style="green", justify="right")
+
+    for entry in cache_info():
+        table.add_row(
+            entry.name,
+            str(entry.path),
+            f"{entry.files:,}",
+            f"{entry.bytes / 1e6:,.1f} MB",
+        )
+    console.print(table)
+
+
+@cache.command("clear")
+@click.option("--ghcn", is_flag=True, help="Clear yearly GHCN databases")
+@click.option("--gsod", is_flag=True, help="Clear per-station GSOD files")
+@click.option("--stations", is_flag=True, help="Clear station lists and ZIP data")
+@click.option("--all", "clear_all", is_flag=True, help="Clear everything")
+@click.option("--yes", is_flag=True, help="Skip the confirmation prompt")
+def cache_clear_cmd(
+    ghcn: bool, gsod: bool, stations: bool, clear_all: bool, yes: bool
+) -> None:
+    """Delete cached data files (they re-download on next use)."""
+    from get_weather_data.core.cache import clear_cache
+
+    if not (ghcn or gsod or stations or clear_all):
+        console.print("Nothing selected; use --ghcn/--gsod/--stations/--all")
+        sys.exit(1)
+    if not yes and not click.confirm("Delete the selected caches?"):
+        sys.exit(1)
+    freed = clear_cache(ghcn=ghcn, gsod=gsod, stations=stations, clear_all=clear_all)
+    console.print(f"[green]Freed {freed / 1e6:,.1f} MB[/green]")
 
 
 def main() -> None:

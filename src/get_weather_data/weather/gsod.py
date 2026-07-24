@@ -5,6 +5,7 @@ import logging
 from datetime import date
 from pathlib import Path
 
+from get_weather_data.core.cache import is_fresh, year_is_immutable
 from get_weather_data.core.config import get_config
 from get_weather_data.core.download import download_with_retry
 from get_weather_data.weather.units import KNOTS_TO_MS, f_to_c
@@ -36,10 +37,12 @@ def _get_gsod_file_path(station_id: str, year: int) -> Path:
 
 
 def _ensure_gsod_file(station_id: str, year: int) -> Path | None:
-    """Download GSOD file if not cached."""
+    """Download GSOD file if not cached (or stale for a mutable year)."""
     file_path = _get_gsod_file_path(station_id, year)
 
-    if file_path.exists():
+    if file_path.exists() and (
+        year_is_immutable(year) or is_fresh(file_path, get_config().cache_max_age_days)
+    ):
         return file_path
 
     file_path.parent.mkdir(parents=True, exist_ok=True)

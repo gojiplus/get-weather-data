@@ -4,43 +4,41 @@ import logging
 import zipfile
 from pathlib import Path
 
+from get_weather_data.core.cache import ensure_fresh_download, is_fresh
 from get_weather_data.core.config import get_config
 from get_weather_data.core.database import Database
-from get_weather_data.core.download import download_with_retry
 
 logger = logging.getLogger("get_weather_data")
 
 GEONAMES_ZIP_URL = "https://download.geonames.org/export/zip/US.zip"
 
 
-def download_zipcodes(output_dir: Path | None = None) -> Path:
+def download_zipcodes(output_dir: Path | None = None, force: bool = False) -> Path:
     """Download and extract US ZIP code data from GeoNames.
 
     Args:
         output_dir: Directory to extract to. Uses cache dir if None.
+        force: Re-download even when the cached copy is fresh.
 
     Returns:
         Path to extracted US.txt file.
 
     Raises:
         RuntimeError: If the download fails after retries.
-    """
+    """  # noqa: DOC502 - raised by ensure_fresh_download
     if output_dir is None:
         output_dir = get_config().stations_cache_dir
 
     output_file = output_dir / "US.txt"
-
-    if not output_file.exists():
+    max_age = get_config().cache_max_age_days
+    if force or not is_fresh(output_file, max_age):
         zip_path = output_dir / "US.zip"
         logger.info("Downloading ZIP code data from GeoNames...")
-        if download_with_retry(GEONAMES_ZIP_URL, zip_path) is None:
-            raise RuntimeError(f"Failed to download {GEONAMES_ZIP_URL}")
+        ensure_fresh_download(GEONAMES_ZIP_URL, zip_path, force=True)
 
         logger.info("Extracting ZIP code data...")
         with zipfile.ZipFile(zip_path) as zf:
             zf.extract("US.txt", output_dir)
-
-        # Clean up zip file
         zip_path.unlink()
 
     return output_file
@@ -95,11 +93,12 @@ def parse_zipcodes(file_path: Path) -> list[dict]:
     return zipcodes
 
 
-def import_zipcodes(db: Database | None = None) -> int:
+def import_zipcodes(db: Database | None = None, force: bool = False) -> int:
     """Download and import ZIP codes to database.
 
     Args:
         db: Database instance. Uses default if None.
+        force: Re-download source files even when fresh.
 
     Returns:
         Number of ZIP codes imported.
@@ -107,7 +106,7 @@ def import_zipcodes(db: Database | None = None) -> int:
     if db is None:
         db = Database()
 
-    file_path = download_zipcodes()
+    file_path = download_zipcodes(force=force)
 
     logger.info("Parsing ZIP codes...")
     zipcodes = parse_zipcodes(file_path)

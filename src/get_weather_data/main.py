@@ -116,17 +116,17 @@ class Weather:
 
         if ghcn_stations:
             logger.info("Importing GHCN stations...")
-            count = import_ghcnd_stations(self.db)
+            count = import_ghcnd_stations(self.db, force=force)
             logger.info(f"Imported {count} GHCN stations")
 
         if usaf_stations:
             logger.info("Importing USAF/WBAN stations...")
-            count = import_isd_stations(self.db)
+            count = import_isd_stations(self.db, force=force)
             logger.info(f"Imported {count} USAF/WBAN stations")
 
         if zipcodes:
             logger.info("Importing ZIP codes...")
-            count = import_zipcodes(self.db)
+            count = import_zipcodes(self.db, force=force)
             logger.info(f"Imported {count} ZIP codes")
 
         if closest_index:
