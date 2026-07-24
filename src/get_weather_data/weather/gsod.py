@@ -1,7 +1,6 @@
 """GSOD (Global Summary of the Day) data fetching for USAF-WBAN stations."""
 
 import logging
-from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 
@@ -26,26 +25,6 @@ GSOD_COLUMNS = [
     ("PRCP", "precipitation"),
     ("SNDP", "snow_depth"),
 ]
-
-
-@dataclass
-class GSODData:
-    """GSOD weather observation data."""
-
-    station_id: str
-    date: date
-    temp: float | None = None
-    dewpoint: float | None = None
-    sea_level_pressure: float | None = None
-    station_pressure: float | None = None
-    visibility: float | None = None
-    wind_speed: float | None = None
-    max_wind_speed: float | None = None
-    gust: float | None = None
-    max_temp: float | None = None
-    min_temp: float | None = None
-    precipitation: float | None = None
-    snow_depth: float | None = None
 
 
 def _f2c(f: float) -> float:
@@ -133,51 +112,3 @@ def get_gsod_data(
                 break
 
     return values
-
-
-def get_gsod_data_range(
-    station_id: str,
-    start_date: date,
-    end_date: date,
-    convert_units: bool = True,
-) -> list[dict]:
-    """Get GSOD data for a station over a date range.
-
-    Args:
-        station_id: USAF-WBAN station ID.
-        start_date: Start date.
-        end_date: End date.
-        convert_units: If True, convert units to metric.
-
-    Returns:
-        List of dicts with 'date' and 'values' keys.
-    """
-    from datetime import timedelta
-
-    results = []
-    current = start_date
-    while current <= end_date:
-        values = get_gsod_data(station_id, current, convert_units)
-        results.append({"date": current, "values": values})
-        current += timedelta(days=1)
-
-    return results
-
-
-def get_gsod_data_object(
-    station_id: str,
-    target_date: date,
-    convert_units: bool = True,
-) -> GSODData:
-    """Get GSOD data as a dataclass object.
-
-    Args:
-        station_id: USAF-WBAN station ID.
-        target_date: Date to get data for.
-        convert_units: If True, convert units to metric.
-
-    Returns:
-        GSODData object with weather values.
-    """
-    values = get_gsod_data(station_id, target_date, convert_units)
-    return GSODData(station_id=station_id, date=target_date, **values)

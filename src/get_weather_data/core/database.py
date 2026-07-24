@@ -271,22 +271,30 @@ class Database:
             return self._closest_cache.get(zipcode, [])
         return []
 
-    def set_closest_stations(
-        self, zipcode: str, stations: list[tuple[str, int]]
+    def set_closest_stations_bulk(
+        self, mapping: dict[str, list[tuple[str, int]]]
     ) -> None:
-        """Cache closest stations for a ZIP code."""
+        """Replace the closest-stations index in a single transaction.
+
+        Args:
+            mapping: ZIP code -> list of (station_id, distance_meters).
+        """
         conn = self._get_connection()
-        conn.execute("DELETE FROM closest WHERE zipcode = ?", (zipcode,))
+        conn.execute("DELETE FROM closest")
         conn.executemany(
             """
             INSERT INTO closest (zipcode, station_id, distance_meters)
             VALUES (?, ?, ?)
             """,
-            [(zipcode, sid, dist) for sid, dist in stations],
+            [
+                (zipcode, sid, dist)
+                for zipcode, stations in mapping.items()
+                for sid, dist in stations
+            ],
         )
         conn.commit()
         if self._closest_cache is not None:
-            self._closest_cache[zipcode] = stations
+            self._closest_cache.update(mapping)
 
     def count_zipcodes(self) -> int:
         """Count ZIP codes in database."""

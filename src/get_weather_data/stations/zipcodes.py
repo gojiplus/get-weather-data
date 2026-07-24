@@ -6,7 +6,7 @@ from pathlib import Path
 
 from get_weather_data.core.config import get_config
 from get_weather_data.core.database import Database
-from get_weather_data.core.download import download
+from get_weather_data.core.download import download_with_retry
 
 logger = logging.getLogger("get_weather_data")
 
@@ -21,6 +21,9 @@ def download_zipcodes(output_dir: Path | None = None) -> Path:
 
     Returns:
         Path to extracted US.txt file.
+
+    Raises:
+        RuntimeError: If the download fails after retries.
     """
     if output_dir is None:
         output_dir = get_config().stations_cache_dir
@@ -30,7 +33,8 @@ def download_zipcodes(output_dir: Path | None = None) -> Path:
     if not output_file.exists():
         zip_path = output_dir / "US.zip"
         logger.info("Downloading ZIP code data from GeoNames...")
-        download(GEONAMES_ZIP_URL, zip_path)
+        if download_with_retry(GEONAMES_ZIP_URL, zip_path) is None:
+            raise RuntimeError(f"Failed to download {GEONAMES_ZIP_URL}")
 
         logger.info("Extracting ZIP code data...")
         with zipfile.ZipFile(zip_path) as zf:

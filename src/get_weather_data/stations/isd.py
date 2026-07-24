@@ -7,7 +7,7 @@ from pathlib import Path
 from get_weather_data.core.config import get_config
 from get_weather_data.core.database import Database
 from get_weather_data.core.distance import Station
-from get_weather_data.core.download import download
+from get_weather_data.core.download import download_with_retry
 
 logger = logging.getLogger("get_weather_data")
 
@@ -22,12 +22,18 @@ def download_isd_stations(output_path: Path | None = None) -> Path:
 
     Returns:
         Path to downloaded file.
+
+    Raises:
+        RuntimeError: If the download fails after retries.
     """
     if output_path is None:
         output_path = get_config().stations_cache_dir / "isd-history.csv"
 
-    if not output_path.exists():
-        download(ISD_HISTORY_URL, output_path)
+    if (
+        not output_path.exists()
+        and download_with_retry(ISD_HISTORY_URL, output_path) is None
+    ):
+        raise RuntimeError(f"Failed to download {ISD_HISTORY_URL}")
 
     return output_path
 
@@ -42,8 +48,8 @@ def parse_isd_stations(file_path: Path) -> list[Station]:
     - CTRY: Country code
     - ST: State abbreviation
     - ICAO: ICAO code
-    - LAT: Latitude (scaled by 1000)
-    - LON: Longitude (scaled by 1000)
+    - LAT: Latitude (decimal degrees)
+    - LON: Longitude (decimal degrees)
     - ELEV(M): Elevation in meters
 
     Args:

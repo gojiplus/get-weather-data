@@ -2,6 +2,7 @@
 
 import io
 import logging
+import os
 import zipfile
 from pathlib import Path
 
@@ -12,6 +13,10 @@ logger = logging.getLogger("get_weather_data")
 
 def download(url: str, output_path: Path | str, timeout: float = 120.0) -> Path:
     """Download a file from URL to local path.
+
+    Streams to a temporary sibling file and atomically renames it into
+    place, so partial downloads never masquerade as complete files and
+    large files are not buffered in memory.
 
     Args:
         url: URL to download from.
@@ -25,12 +30,21 @@ def download(url: str, output_path: Path | str, timeout: float = 120.0) -> Path:
         httpx.HTTPStatusError: If download fails.
     """  # noqa: DOC502 - raised by raise_for_status()
     output_path = Path(output_path)
+    part_path = output_path.with_name(f"{output_path.name}.part-{os.getpid()}")
     logger.info(f"Downloading {url}...")
 
-    with httpx.Client(timeout=timeout, follow_redirects=True) as client:
-        response = client.get(url)
-        response.raise_for_status()
-        output_path.write_bytes(response.content)
+    try:
+        with (
+            httpx.Client(timeout=timeout, follow_redirects=True) as client,
+            client.stream("GET", url) as response,
+        ):
+            response.raise_for_status()
+            with part_path.open("wb") as handle:
+                for chunk in response.iter_bytes():
+                    handle.write(chunk)
+        os.replace(part_path, output_path)
+    finally:
+        part_path.unlink(missing_ok=True)
 
     logger.debug(f"Downloaded to {output_path}")
     return output_path

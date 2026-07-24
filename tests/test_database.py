@@ -94,9 +94,8 @@ class TestDatabase:
             lon=-87.0547,
         )
 
-        temp_db.set_closest_stations(
-            "36420",
-            [("USC00011084", 100), ("USW00013894", 50000)],
+        temp_db.set_closest_stations_bulk(
+            {"36420": [("USC00011084", 100), ("USW00013894", 50000)]}
         )
 
         closest = temp_db.get_closest_stations("36420")

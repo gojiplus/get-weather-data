@@ -27,7 +27,6 @@ class Config:
     # Station settings (more stations = better fallback coverage)
     ghcn_station_count: int = 5
     usaf_station_count: int = 3
-    coop_station_count: int = 0
 
     # API settings
     ncdc_token: str | None = None

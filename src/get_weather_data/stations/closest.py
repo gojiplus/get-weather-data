@@ -53,6 +53,7 @@ def build_closest_index(
 
     processed = 0
     total = len(zipcodes)
+    mapping: dict[str, list[tuple[str, int]]] = {}
 
     for zipcode, lat, lon in zipcodes:
         if lat is None or lon is None:
@@ -60,24 +61,24 @@ def build_closest_index(
 
         closest_stations = []
 
-        # Find closest GHCND stations (O(log n) with pre-built index)
         if ghcn_count > 0:
             ghcn_closest = ghcn_index.find_closest(lat, lon, n=ghcn_count)
             for sd in ghcn_closest:
                 closest_stations.append((sd.station.id, sd.distance_meters))
 
-        # Find closest USAF stations (O(log n) with pre-built index)
         if usaf_count > 0:
             usaf_closest = usaf_index.find_closest(lat, lon, n=usaf_count)
             for sd in usaf_closest:
                 closest_stations.append((sd.station.id, sd.distance_meters))
 
-        # Store in database
-        db.set_closest_stations(zipcode, closest_stations)
+        mapping[zipcode] = closest_stations
 
         processed += 1
         if processed % 5000 == 0:
-            logger.info(f"Processed {processed}/{total} ZIP codes...")
+            logger.info(f"Computed {processed}/{total} ZIP codes...")
+
+    # One transaction for the whole index (~41k ZIPs) instead of per-ZIP commits
+    db.set_closest_stations_bulk(mapping)
 
     logger.info(f"Built closest index for {processed} ZIP codes")
     return processed

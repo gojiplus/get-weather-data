@@ -4,7 +4,6 @@ import csv
 import gzip
 import logging
 import sqlite3
-from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 
@@ -14,7 +13,6 @@ from get_weather_data.core.download import download_with_retry
 logger = logging.getLogger("get_weather_data")
 
 GHCN_BY_YEAR_URL = "https://www.ncei.noaa.gov/pub/data/ghcn/daily/by_year/{year}.csv.gz"
-GHCN_STATION_URL = "https://www.ncei.noaa.gov/pub/data/ghcn/daily/all/{station_id}.dly"
 
 GHCN_ELEMENTS = [
     "AWND",  # Average daily wind speed
@@ -26,19 +24,6 @@ GHCN_ELEMENTS = [
     "TOBS",  # Temperature at observation time
     "TAVG",  # Average temperature
 ]
-
-
-@dataclass
-class GHCNData:
-    """GHCN weather observation data."""
-
-    station_id: str
-    date: date
-    element: str
-    value: float | None
-    m_flag: str
-    q_flag: str
-    s_flag: str
 
 
 def _get_ghcn_db_path(year: int) -> Path:
@@ -140,86 +125,5 @@ def get_ghcn_data(
                 values[element] = float(value)
     finally:
         conn.close()
-
-    return values
-
-
-def get_ghcn_data_range(
-    station_id: str,
-    start_date: date,
-    end_date: date,
-    elements: list[str] | None = None,
-) -> list[dict]:
-    """Get GHCN data for a station over a date range.
-
-    Args:
-        station_id: GHCN station ID.
-        start_date: Start date.
-        end_date: End date.
-        elements: List of elements to retrieve.
-
-    Returns:
-        List of dicts with 'date' and 'values' keys.
-    """
-    from datetime import timedelta
-
-    if elements is None:
-        elements = GHCN_ELEMENTS
-
-    results = []
-    current = start_date
-    while current <= end_date:
-        values = get_ghcn_data(station_id, current, elements)
-        results.append({"date": current, "values": values})
-        current += timedelta(days=1)
-
-    return results
-
-
-def get_ghcn_data_from_file(
-    station_id: str,
-    target_date: date,
-    elements: list[str] | None = None,
-) -> dict[str, float | None]:
-    """Get GHCN data from per-station .dly file (slower but doesn't require full year).
-
-    Args:
-        station_id: GHCN station ID.
-        target_date: Date to get data for.
-        elements: List of elements to retrieve.
-
-    Returns:
-        Dict mapping element names to values.
-    """
-    if elements is None:
-        elements = GHCN_ELEMENTS
-
-    config = get_config()
-    dly_path = config.ghcn_cache_dir / f"{station_id}.dly"
-
-    if not dly_path.exists():
-        url = GHCN_STATION_URL.format(station_id=station_id)
-        result = download_with_retry(url, dly_path)
-        if result is None:
-            return dict.fromkeys(elements)
-
-    year = target_date.year
-    month = target_date.month
-    day = target_date.day
-
-    search_prefix = f"{station_id}{year:04d}{month:02d}"
-    values: dict[str, float | None] = dict.fromkeys(elements)
-
-    with open(dly_path, encoding="utf-8", errors="replace") as f:
-        for line in f:
-            if line[:17] == search_prefix:
-                element = line[17:21]
-                if element in elements:
-                    offset = 21 + (day - 1) * 8
-                    value_str = line[offset : offset + 5].strip()
-                    if value_str and value_str != "-9999":
-                        values[element] = float(value_str)
-            elif line[:11] > station_id + str(year):
-                break
 
     return values

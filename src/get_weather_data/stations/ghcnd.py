@@ -6,7 +6,7 @@ from pathlib import Path
 from get_weather_data.core.config import get_config
 from get_weather_data.core.database import Database
 from get_weather_data.core.distance import Station
-from get_weather_data.core.download import download
+from get_weather_data.core.download import download_with_retry
 
 logger = logging.getLogger("get_weather_data")
 
@@ -21,12 +21,18 @@ def download_ghcnd_stations(output_path: Path | None = None) -> Path:
 
     Returns:
         Path to downloaded file.
+
+    Raises:
+        RuntimeError: If the download fails after retries.
     """
     if output_path is None:
         output_path = get_config().stations_cache_dir / "ghcnd-stations.txt"
 
-    if not output_path.exists():
-        download(GHCND_STATIONS_URL, output_path)
+    if (
+        not output_path.exists()
+        and download_with_retry(GHCND_STATIONS_URL, output_path) is None
+    ):
+        raise RuntimeError(f"Failed to download {GHCND_STATIONS_URL}")
 
     return output_path
 
