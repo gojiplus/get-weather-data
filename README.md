@@ -104,7 +104,7 @@ results = weather.get_range(
 )
 
 for r in results:
-    print(f"{r.date}: High {r.tmax/10:.0f}°C, Low {r.tmin/10:.0f}°C")
+    print(f"{r.date}: High {r.tmax / 10:.0f}°C, Low {r.tmin / 10:.0f}°C")
 ```
 
 ### Process a CSV File

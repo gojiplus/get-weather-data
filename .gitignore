@@ -28,4 +28,3 @@ htmlcov/
 docs/_build/
 
 # uv
-uv.lock
