@@ -195,6 +195,8 @@ class Weather:
         input_path: str | Path,
         output_path: str | Path,
         zipcode_column: str | int = "zip",
+        lat_column: str | int | None = None,
+        lon_column: str | int | None = None,
         date_column: str | int | None = None,
         year_column: str | int | None = "year",
         month_column: str | int | None = "month",
@@ -208,6 +210,8 @@ class Weather:
             input_path: Path to input CSV file.
             output_path: Path to output CSV file.
             zipcode_column: Column name or index for ZIP code.
+            lat_column: Column for latitude (used with lon_column).
+            lon_column: Column for longitude.
             date_column: Column name or index for date (YYYY-MM-DD).
             year_column: Column for year (if no date_column).
             month_column: Column for month (if no date_column).
@@ -233,11 +237,14 @@ class Weather:
             input_path=Path(input_path),
             output_path=Path(output_path),
             zipcode_column=zipcode_column,
+            lat_column=lat_column,
+            lon_column=lon_column,
             date_column=date_column,
             year_column=year_column,
             month_column=month_column,
             day_column=day_column,
             db=self.db,
+            units=self.units,
             parallel=parallel,
             max_workers=max_workers,
         )

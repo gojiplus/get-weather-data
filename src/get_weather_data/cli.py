@@ -152,6 +152,14 @@ def get(
 @click.argument("input_file", type=click.Path(exists=True))
 @click.argument("output_file", type=click.Path())
 @click.option("--zip-column", default="zip", help="ZIP code column name or index")
+@click.option("--lat-column", help="Latitude column (used with --lon-column)")
+@click.option("--lon-column", help="Longitude column")
+@click.option(
+    "--units",
+    type=click.Choice(["metric", "imperial"]),
+    default="metric",
+    help="Unit system for the output values",
+)
 @click.option("--date-column", help="Date column (YYYY-MM-DD format)")
 @click.option("--year-column", default="year", help="Year column name")
 @click.option("--month-column", default="month", help="Month column name")
@@ -164,6 +172,9 @@ def process(
     input_file: str,
     output_file: str,
     zip_column: str,
+    lat_column: str | None,
+    lon_column: str | None,
+    units: str,
     date_column: str | None,
     year_column: str,
     month_column: str,
@@ -182,6 +193,7 @@ def process(
     weather = Weather(
         database_path=ctx.obj["database"],
         verbose=ctx.obj["verbose"],
+        units=units,  # type: ignore[arg-type]
     )
 
     mode = "parallel" if parallel else "sequential"
@@ -191,6 +203,8 @@ def process(
         input_path=input_file,
         output_path=output_file,
         zipcode_column=zip_column,
+        lat_column=lat_column,
+        lon_column=lon_column,
         date_column=date_column,
         year_column=year_column if not date_column else None,
         month_column=month_column if not date_column else None,

@@ -24,14 +24,16 @@ class Database:
     Uses connection pooling and caches station metadata for efficiency.
     """
 
-    _local = threading.local()
-
     def __init__(self, path: Path | str | None = None) -> None:
         """Initialize database.
 
         Args:
             path: Path to SQLite database. If None, uses config default.
         """
+        # Per-instance thread-local: a class-level one would share
+        # connections across Database instances pointing at different
+        # files within the same thread
+        self._local = threading.local()
         db_path = get_config().database_path if path is None else Path(path)
         self.path = db_path
         self._station_cache: dict[str, tuple[str, str]] | None = None
