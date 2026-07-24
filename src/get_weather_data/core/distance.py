@@ -1,5 +1,7 @@
 """Geographic distance calculations for get-weather-data."""
 
+from __future__ import annotations
+
 import logging
 import math
 from collections.abc import Sequence
@@ -50,6 +52,51 @@ def meters_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float
     return distance * METERS_PER_NAUTICAL_MILE
 
 
+# Extra neighbors fetched from the tree before re-ranking. Chord ranking
+# is exact for great-circle distance; the margin absorbs the tiny
+# difference between great-circle and the equirectangular meters_distance
+# used for final ordering.
+KDTREE_OVERSAMPLE = 5
+
+
+def _project(lat: float, lon: float) -> tuple[float, float, float]:
+    """Project degrees onto the 3D unit sphere.
+
+    Euclidean (chord) distance between projected points is monotone in
+    great-circle distance, so nearest-neighbor ranking in this space is
+    exact everywhere — no flat-map distortion.
+    """
+    lat_r = lat * RAD
+    lon_r = lon * RAD
+    cos_lat = math.cos(lat_r)
+    return (cos_lat * math.cos(lon_r), cos_lat * math.sin(lon_r), math.sin(lat_r))
+
+
+def _rank_candidates(
+    lat: float,
+    lon: float,
+    candidates: list[Station],
+    n: int | None,
+    max_distance_km: float | None,
+) -> list[StationDistance]:
+    """Order candidate stations by true distance and apply limits."""
+    ranked = sorted(
+        (
+            StationDistance(
+                station=s,
+                distance_meters=int(meters_distance(lat, lon, s.lat, s.lon)),
+            )
+            for s in candidates
+        ),
+        key=lambda sd: sd.distance_meters,
+    )
+    if max_distance_km is not None:
+        ranked = [sd for sd in ranked if sd.distance_meters <= max_distance_km * 1000]
+    if n is not None:
+        ranked = ranked[:n]
+    return ranked
+
+
 @dataclass
 class Station:
     """A weather station with location."""
@@ -87,7 +134,7 @@ class StationIndex:
         self.stations = [s for s in stations if s.lat is not None and s.lon is not None]
         self._tree: Any = None
         if self.stations and np is not None and KDTree is not None:
-            coords = np.array([(s.lat, s.lon) for s in self.stations])
+            coords = np.array([_project(s.lat, s.lon) for s in self.stations])
             self._tree = KDTree(coords)
 
     def find_closest(
@@ -111,26 +158,15 @@ class StationIndex:
         if not self.stations:
             return []
 
-        if self._tree is not None:
-            k = min(n, len(self.stations))
-            distances, indices = self._tree.query([lat, lon], k=k)
-
-            # Handle single result case
-            if isinstance(distances, float):
-                distances = [distances]
-                indices = [indices]
-
-            results = []
-            for dist_deg, idx in zip(distances, indices, strict=False):
-                station = self.stations[idx]
-                dist_m = int(dist_deg * 111000)
-
-                if max_distance_km is not None and dist_m > max_distance_km * 1000:
-                    break
-
-                results.append(StationDistance(station=station, distance_meters=dist_m))
-
-            return results
+        if self._tree is not None and np is not None:
+            # Oversample to absorb residual projection error, then re-rank
+            # candidates by true distance
+            k = min(n + KDTREE_OVERSAMPLE, len(self.stations))
+            _, raw_indices = self._tree.query(_project(lat, lon), k=k)
+            indices = [int(i) for i in np.atleast_1d(raw_indices)]
+            return _rank_candidates(
+                lat, lon, [self.stations[i] for i in indices], n, max_distance_km
+            )
 
         # Fallback to brute force
         return _find_closest_brute(lat, lon, self.stations, n, max_distance_km)
@@ -184,28 +220,15 @@ def _find_closest_kdtree(
     """Find closest stations using KDTree (scipy)."""
     if np is None or KDTree is None:
         raise RuntimeError("scipy is required for KDTree search")
-    coords = np.array([(s.lat, s.lon) for s in stations])
+    coords = np.array([_project(s.lat, s.lon) for s in stations])
     tree = KDTree(coords)
 
-    k = len(stations) if n is None else min(n, len(stations))
-    raw_distances, raw_indices = tree.query([lat, lon], k=k)
-
-    # k=1 returns scalars; normalize to 1-d arrays
-    distances = [float(d) for d in np.atleast_1d(raw_distances)]
+    k = len(stations) if n is None else min(n + KDTREE_OVERSAMPLE, len(stations))
+    _, raw_indices = tree.query(_project(lat, lon), k=k)
     indices = [int(i) for i in np.atleast_1d(raw_indices)]
-
-    results = []
-    for dist_deg, idx in zip(distances, indices, strict=False):
-        station = stations[idx]
-        # Convert degree distance to meters (approximate)
-        dist_m = int(dist_deg * 111000)
-
-        if max_distance_km is not None and dist_m > max_distance_km * 1000:
-            break
-
-        results.append(StationDistance(station=station, distance_meters=dist_m))
-
-    return results
+    return _rank_candidates(
+        lat, lon, [stations[i] for i in indices], n, max_distance_km
+    )
 
 
 def _find_closest_brute(
@@ -237,23 +260,3 @@ def _find_closest_brute(
         results = results[:n]
 
     return results
-
-
-def f2c(fahrenheit: float) -> float:
-    """Convert Fahrenheit to Celsius."""
-    return (fahrenheit - 32) * 5.0 / 9.0
-
-
-def c2f(celsius: float) -> float:
-    """Convert Celsius to Fahrenheit."""
-    return celsius * 9.0 / 5.0 + 32
-
-
-def knots_to_ms(knots: float) -> float:
-    """Convert knots to meters per second."""
-    return 0.51444 * knots
-
-
-def ms_to_knots(ms: float) -> float:
-    """Convert meters per second to knots."""
-    return ms / 0.51444

@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from datetime import date, timedelta
 from functools import lru_cache
 
-from get_weather_data.core.database import Database
+from get_weather_data.core.database import INDEX_VERSION, Database
 from get_weather_data.core.distance import find_closest
 from get_weather_data.weather.ghcn import GHCN_ELEMENTS, get_ghcn_data
 from get_weather_data.weather.gsod import get_gsod_data
@@ -63,9 +63,16 @@ class WeatherLookup:
     use_cache: bool = True
 
     def __post_init__(self) -> None:
-        """Preload caches for efficiency."""
+        """Preload caches and check the index version."""
         if self.db.exists():
             self.db.preload_caches()
+            stored = self.db.get_meta("index_version")
+            if stored != str(INDEX_VERSION):
+                logger.warning(
+                    "Station index was built by an older version and its "
+                    "distances are unreliable. Run setup(force=True) "
+                    "(CLI: get-weather setup --force) to rebuild."
+                )
 
     def get_weather(
         self,

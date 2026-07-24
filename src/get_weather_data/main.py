@@ -6,7 +6,7 @@ from datetime import date
 from pathlib import Path
 
 from get_weather_data.core.config import Config, set_config
-from get_weather_data.core.database import Database
+from get_weather_data.core.database import INDEX_VERSION, Database
 from get_weather_data.core.logging import setup_logging
 from get_weather_data.stations import (
     build_closest_index,
@@ -129,6 +129,8 @@ class Weather:
             logger.info("Building closest stations index...")
             count = build_closest_index(self.db)
             logger.info(f"Indexed {count} ZIP codes")
+
+        self.db.set_meta("index_version", str(INDEX_VERSION))
 
     def get(
         self,

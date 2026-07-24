@@ -13,6 +13,10 @@ from get_weather_data.core.distance import Station
 
 logger = logging.getLogger("get_weather_data")
 
+# Version of the closest-station index layout/semantics. v4 fixed the
+# KDTree distance math; older indexes carry wrong distances.
+INDEX_VERSION = 4
+
 
 class Database:
     """SQLite database for weather station and ZIP code data.
@@ -101,6 +105,13 @@ class Database:
                 station_id TEXT,
                 distance_meters INTEGER,
                 PRIMARY KEY (zipcode, station_id)
+            )
+        """)
+
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS meta (
+                key TEXT PRIMARY KEY,
+                value TEXT
             )
         """)
 
@@ -295,6 +306,34 @@ class Database:
         conn.commit()
         if self._closest_cache is not None:
             self._closest_cache.update(mapping)
+
+    def get_meta(self, key: str) -> str | None:
+        """Read a value from the meta table.
+
+        Args:
+            key: Meta key.
+
+        Returns:
+            Stored value, or None when absent (or table missing).
+        """
+        try:
+            rows = self.execute("SELECT value FROM meta WHERE key = ?", (key,))
+        except sqlite3.OperationalError:
+            return None
+        return rows[0][0] if rows else None
+
+    def set_meta(self, key: str, value: str) -> None:
+        """Write a value to the meta table.
+
+        Args:
+            key: Meta key.
+            value: Value to store.
+        """
+        conn = self._get_connection()
+        conn.execute(
+            "INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)", (key, value)
+        )
+        conn.commit()
 
     def count_zipcodes(self) -> int:
         """Count ZIP codes in database."""
