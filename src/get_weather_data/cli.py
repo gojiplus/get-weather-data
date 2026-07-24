@@ -7,6 +7,7 @@ from rich.console import Console
 from rich.table import Table
 
 from get_weather_data import Weather, __version__
+from get_weather_data.weather.units import ELEMENTS, unit_label
 
 console = Console()
 
@@ -75,18 +76,37 @@ def setup(
 
 
 @cli.command()
-@click.argument("zipcode")
+@click.argument("location")
 @click.argument("target_date")
+@click.option(
+    "--units",
+    type=click.Choice(["metric", "imperial"]),
+    default="metric",
+    help="Unit system for the values shown",
+)
+@click.option(
+    "--elements",
+    help="Comma-separated element codes to fetch (e.g. TMAX,PRCP)",
+)
 @click.option(
     "--online",
     is_flag=True,
     help="Query the NOAA CDO API directly (no local database; requires NCDC_TOKEN)",
 )
 @click.pass_context
-def get(ctx: click.Context, zipcode: str, target_date: str, online: bool) -> None:
-    """Get weather data for a ZIP code and date.
+def get(
+    ctx: click.Context,
+    location: str,
+    target_date: str,
+    units: str,
+    elements: str | None,
+    online: bool,
+) -> None:
+    """Get weather data for a location and date.
 
-    ZIPCODE: 5-digit US ZIP code (e.g., 10001)
+    LOCATION: 5-digit US ZIP code (e.g., 10001) or "lat,lon"
+    coordinates (e.g., "40.75,-73.99")
+
     TARGET_DATE: Date in YYYY-MM-DD format (e.g., 2024-01-15)
     """
     try:
@@ -94,13 +114,15 @@ def get(ctx: click.Context, zipcode: str, target_date: str, online: bool) -> Non
             database_path=ctx.obj["database"],
             verbose=ctx.obj["verbose"],
             online=online,
+            units=units,  # type: ignore[arg-type]
         )
-        result = weather.get(zipcode, target_date)
+        element_list = elements.split(",") if elements else None
+        result = weather.get(location, target_date, elements=element_list)
     except Exception as e:
         console.print(f"[red]Error: {e}[/red]")
         sys.exit(1)
 
-    table = Table(title=f"Weather for {zipcode} on {target_date}")
+    table = Table(title=f"Weather for {location} on {target_date}")
     table.add_column("Field", style="cyan")
     table.add_column("Value", style="green")
 
@@ -111,19 +133,17 @@ def get(ctx: click.Context, zipcode: str, target_date: str, online: bool) -> Non
         "Distance",
         (
             f"{result.station_distance_meters:,} m"
-            if result.station_distance_meters
+            if result.station_distance_meters is not None
             else "N/A"
         ),
     )
-    table.add_row("Max Temp", f"{result.tmax / 10:.1f} °C" if result.tmax else "N/A")
-    table.add_row("Min Temp", f"{result.tmin / 10:.1f} °C" if result.tmin else "N/A")
-    table.add_row("Avg Temp", f"{result.tavg / 10:.1f} °C" if result.tavg else "N/A")
-    table.add_row(
-        "Precipitation", f"{result.prcp / 10:.1f} mm" if result.prcp else "N/A"
-    )
-    table.add_row("Snowfall", f"{result.snow} mm" if result.snow else "N/A")
-    table.add_row("Snow Depth", f"{result.snwd} mm" if result.snwd else "N/A")
-    table.add_row("Avg Wind", f"{result.awnd / 10:.1f} m/s" if result.awnd else "N/A")
+    for element, spec in ELEMENTS.items():
+        value = getattr(result, spec.field)
+        label = unit_label(element, result.units)
+        table.add_row(
+            spec.description,
+            f"{value:.1f} {label}" if value is not None else "N/A",
+        )
 
     console.print(table)
 

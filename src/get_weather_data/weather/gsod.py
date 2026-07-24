@@ -1,11 +1,13 @@
 """GSOD (Global Summary of the Day) data fetching for USAF-WBAN stations."""
 
+import csv
 import logging
 from datetime import date
 from pathlib import Path
 
 from get_weather_data.core.config import get_config
 from get_weather_data.core.download import download_with_retry
+from get_weather_data.weather.units import KNOTS_TO_MS, f_to_c
 
 logger = logging.getLogger("get_weather_data")
 
@@ -25,16 +27,6 @@ GSOD_COLUMNS = [
     ("PRCP", "precipitation"),
     ("SNDP", "snow_depth"),
 ]
-
-
-def _f2c(f: float) -> float:
-    """Convert Fahrenheit to Celsius."""
-    return (f - 32) * 5.0 / 9.0
-
-
-def _kn2ms(kn: float) -> float:
-    """Convert knots to meters per second."""
-    return 0.51444 * kn
 
 
 def _get_gsod_file_path(station_id: str, year: int) -> Path:
@@ -72,8 +64,6 @@ def get_gsod_data(
     Returns:
         Dict mapping field names to values.
     """
-    import csv
-
     year = target_date.year
     file_path = _ensure_gsod_file(station_id, year)
 
@@ -99,13 +89,13 @@ def get_gsod_data(
                                     "min_temp",
                                     "dewpoint",
                                 ):
-                                    value = _f2c(value)
+                                    value = f_to_c(value)
                                 elif field_name in (
                                     "wind_speed",
                                     "max_wind_speed",
                                     "gust",
                                 ):
-                                    value = _kn2ms(value)
+                                    value = value * KNOTS_TO_MS
                             values[field_name] = value
                         except ValueError:
                             pass

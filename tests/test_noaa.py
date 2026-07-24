@@ -243,8 +243,9 @@ class TestOnlineLookup:
         assert result.station_type == "GHCND"
         assert result.station_distance_meters is not None
         assert result.station_distance_meters > 0
-        assert result.tmax == -10
-        assert result.tmin == -43
+        assert result.units == "metric"
+        assert result.tmax == -1.0  # raw tenths -> deg C
+        assert result.tmin == -4.3
 
     @respx.mock
     def test_missing_elements_filled_from_farther_stations(self):
@@ -300,7 +301,7 @@ class TestOnlineLookup:
         )
         assert stations_route.call_count == 1
         assert data_route.call_count == 1
-        assert [r.tmax for r in results] == [30, 31, 32]
+        assert [r.tmax for r in results] == [3.0, 3.1, 3.2]
         assert [r.date.day for r in results] == [15, 16, 17]
 
     @respx.mock
@@ -350,7 +351,7 @@ class TestWeatherOnline:
             zip_coordinates_loader=lambda: {"10001": (40.7484, -73.9967)},
         )
         result = weather.get("10001", "2024-01-15")
-        assert result.tmax == 44
+        assert result.tmax == 4.4
         assert result.station_name == "NY CITY CENTRAL PARK"
 
     def test_online_without_token_raises(self):

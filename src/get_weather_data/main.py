@@ -15,8 +15,11 @@ from get_weather_data.stations import (
     import_zipcodes,
 )
 from get_weather_data.weather.batch import process_csv as _process_csv
-from get_weather_data.weather.lookup import WeatherLookup, WeatherResult
+from get_weather_data.weather.location import LocationInput
+from get_weather_data.weather.lookup import WeatherLookup
 from get_weather_data.weather.online import OnlineLookup
+from get_weather_data.weather.results import WeatherResult
+from get_weather_data.weather.units import Units
 
 logger = logging.getLogger("get_weather_data")
 
@@ -43,6 +46,7 @@ class Weather:
     database_path: Path | str | None = None
     verbose: bool = False
     online: bool = False
+    units: Units = "metric"
     _db: Database | None = field(default=None, repr=False)
     _lookup: WeatherLookup | None = field(default=None, repr=False)
     _online_lookup: OnlineLookup | None = field(default=None, repr=False)
@@ -61,7 +65,7 @@ class Weather:
 
         if self.online:
             # Fail fast on a missing token, and skip the local database
-            self._online_lookup = OnlineLookup()
+            self._online_lookup = OnlineLookup(units=self.units)
         else:
             self._db = Database(self.database_path)
 
@@ -76,7 +80,7 @@ class Weather:
     def lookup(self) -> WeatherLookup:
         """Get the weather lookup instance."""
         if self._lookup is None:
-            self._lookup = WeatherLookup(db=self.db)
+            self._lookup = WeatherLookup(db=self.db, units=self.units)
         return self._lookup
 
     def setup(
@@ -134,14 +138,15 @@ class Weather:
 
     def get(
         self,
-        zipcode: str,
+        location: LocationInput,
         target_date: str | date,
         elements: list[str] | None = None,
     ) -> WeatherResult:
-        """Get weather data for a ZIP code and date.
+        """Get weather data for a location and date.
 
         Args:
-            zipcode: 5-digit US ZIP code.
+            location: 5-digit US ZIP code, "lat,lon" string, or
+                (lat, lon) tuple.
             target_date: Date as string (YYYY-MM-DD) or date object.
             elements: List of weather elements to retrieve.
 
@@ -152,20 +157,21 @@ class Weather:
             target_date = date.fromisoformat(target_date)
 
         if self._online_lookup is not None:
-            return self._online_lookup.get_weather(zipcode, target_date, elements)
-        return self.lookup.get_weather(zipcode, target_date, elements)
+            return self._online_lookup.get_weather(location, target_date, elements)
+        return self.lookup.get_weather(location, target_date, elements)
 
     def get_range(
         self,
-        zipcode: str,
+        location: LocationInput,
         start_date: str | date,
         end_date: str | date,
         elements: list[str] | None = None,
     ) -> list[WeatherResult]:
-        """Get weather data for a ZIP code over a date range.
+        """Get weather data for a location over a date range.
 
         Args:
-            zipcode: 5-digit US ZIP code.
+            location: 5-digit US ZIP code, "lat,lon" string, or
+                (lat, lon) tuple.
             start_date: Start date as string (YYYY-MM-DD) or date object.
             end_date: End date as string (YYYY-MM-DD) or date object.
             elements: List of weather elements to retrieve.
@@ -180,9 +186,9 @@ class Weather:
 
         if self._online_lookup is not None:
             return self._online_lookup.get_weather_range(
-                zipcode, start_date, end_date, elements
+                location, start_date, end_date, elements
             )
-        return self.lookup.get_weather_range(zipcode, start_date, end_date, elements)
+        return self.lookup.get_weather_range(location, start_date, end_date, elements)
 
     def process_csv(
         self,
@@ -241,7 +247,20 @@ class Weather:
 
         Returns:
             Dict with counts of stations and ZIP codes.
+
+        Raises:
+            RuntimeError: In online mode (no local database), or when
+                the database has not been set up yet.
         """
+        if self.online:
+            raise RuntimeError(
+                "info() reports on the local database; this Weather was "
+                "created with online=True."
+            )
+        if not self.db.exists() or self.db.count_stations() == 0:
+            raise RuntimeError(
+                "No station database found. Run setup() (CLI: get-weather setup) first."
+            )
         return {
             "ghcn_stations": self.db.count_stations("GHCND"),
             "usaf_stations": self.db.count_stations("USAF-WBAN"),

@@ -9,7 +9,8 @@ from datetime import date
 from pathlib import Path
 
 from get_weather_data.core.database import Database
-from get_weather_data.weather.lookup import WeatherLookup, WeatherResult
+from get_weather_data.weather.lookup import WeatherLookup
+from get_weather_data.weather.results import WeatherResult
 
 logger = logging.getLogger("get_weather_data")
 

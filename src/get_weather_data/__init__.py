@@ -23,6 +23,9 @@ Basic usage:
 from importlib.metadata import PackageNotFoundError, version
 
 from get_weather_data.main import Weather
+from get_weather_data.weather.location import LocationInput
+from get_weather_data.weather.results import WeatherResult
+from get_weather_data.weather.units import Units
 
 try:
     __version__ = version("get-weather-data")
@@ -30,6 +33,9 @@ except PackageNotFoundError:
     __version__ = "0.0.0"
 
 __all__ = [
+    "LocationInput",
+    "Units",
     "Weather",
+    "WeatherResult",
     "__version__",
 ]

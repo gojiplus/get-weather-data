@@ -38,7 +38,7 @@ class TestCli:
         runner = CliRunner()
         result = runner.invoke(cli, ["get", "--help"])
         assert result.exit_code == 0
-        assert "Get weather data for a ZIP code" in result.output
+        assert "Get weather data for a location" in result.output
 
     def test_get_help_mentions_online(self):
         """Test that get --help documents the --online flag."""
