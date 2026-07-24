@@ -25,7 +25,7 @@ weather = Weather()
 weather.setup()  # First time only
 
 result = weather.get("10001", "2024-01-15")
-print(f"Max temp: {result.tmax / 10:.1f} °C")
+print(f"Max temp: {result.tmax} °C")
 ```
 
 ## Features

@@ -14,7 +14,7 @@ from get_weather_data import Weather
 # Initialize
 weather = Weather(verbose=True)
 
-# Set up the database (downloads ~50MB of station data, takes a few minutes first time)
+# Set up the database (downloads ~60MB of station data, takes a few minutes first time)
 # After first run, this is instant
 weather.setup()
 
@@ -27,10 +27,10 @@ print(f"  Distance: {result.station_distance_meters:,} meters")
 print()
 
 if result.tmax is not None:
-    print(f"  Max temp: {result.tmax / 10:.1f} °C")
+    print(f"  Max temp: {result.tmax:.1f} °C")
 if result.tmin is not None:
-    print(f"  Min temp: {result.tmin / 10:.1f} °C")
+    print(f"  Min temp: {result.tmin:.1f} °C")
 if result.prcp is not None:
-    print(f"  Precipitation: {result.prcp / 10:.1f} mm")
+    print(f"  Precipitation: {result.prcp:.1f} mm")
 if result.snow is not None:
     print(f"  Snowfall: {result.snow} mm")

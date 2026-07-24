@@ -19,13 +19,18 @@ Options:
 
 ## Get Weather
 
-Get weather for a single ZIP code and date:
+Get weather for a single location and date — a ZIP code or
+"lat,lon" coordinates:
 
 ```bash
 get-weather get 10001 2024-01-15
+get-weather get "40.75,-73.99" 2024-01-15
+get-weather get 10001 2024-01-15 --units imperial
+get-weather get 10001 2024-01-15 --elements TMAX,PRCP
 ```
 
-Output shows temperature, precipitation, and station info in a table.
+Output shows temperature, precipitation, and station info in a table;
+values are in the chosen unit system (metric by default).
 
 With `--online`, the query goes straight to the NOAA CDO API — no
 `setup` needed, but `NCDC_TOKEN` must be set
@@ -45,10 +50,16 @@ get-weather process input.csv output.csv
 
 Options:
 - `--zip-column`: Column name for ZIP codes (default: "zip")
+- `--lat-column` / `--lon-column`: Coordinate columns (take precedence
+  over the ZIP column when both are present)
+- `--units`: metric (default) or imperial output values
 - `--date-column`: Column with date in YYYY-MM-DD format
 - `--year-column`: Column for year (default: "year")
 - `--month-column`: Column for month (default: "month")
 - `--day-column`: Column for day (default: "day")
+
+A row that cannot be resolved gets its reason in the `weather_error`
+output column; the job continues, and output is written incrementally.
 
 Example with date column:
 
@@ -62,6 +73,16 @@ Show database statistics:
 
 ```bash
 get-weather info
+```
+
+## Cache
+
+Inspect or reclaim disk used by cached weather data:
+
+```bash
+get-weather cache info
+get-weather cache clear --ghcn      # yearly GHCN databases
+get-weather cache clear --all --yes
 ```
 
 ## Global Options

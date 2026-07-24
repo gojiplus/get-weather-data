@@ -12,10 +12,12 @@ The main interface for getting weather data.
 
 ## WeatherResult
 
-Data returned from weather queries.
+Data returned from weather queries. Value fields are floats in the
+unit system named by ``units`` (metric: °C/mm/m/s; imperial:
+°F/in/mph); ``None`` means no station reported that element.
 
 ```{eval-rst}
-.. autoclass:: get_weather_data.weather.lookup.WeatherResult
+.. autoclass:: get_weather_data.WeatherResult
    :members:
    :undoc-members:
 ```

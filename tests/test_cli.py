@@ -105,6 +105,36 @@ class TestCli:
         assert "Error:" in result.output
         assert "cdo-web/token" in result.output
 
+    def test_cache_info_help(self):
+        """Test cache info --help."""
+        runner = CliRunner()
+        result = runner.invoke(cli, ["cache", "info", "--help"])
+        assert result.exit_code == 0
+        assert "disk usage" in result.output.lower()
+
+    def test_cache_clear_requires_selection(self):
+        """Test cache clear with nothing selected exits 1."""
+        runner = CliRunner()
+        result = runner.invoke(cli, ["cache", "clear", "--yes"])
+        assert result.exit_code == 1
+        assert "Nothing selected" in result.output
+
+    def test_get_units_flag_in_help(self):
+        """Test get --help shows units and elements options."""
+        runner = CliRunner()
+        result = runner.invoke(cli, ["get", "--help"])
+        assert "--units" in result.output
+        assert "--elements" in result.output
+        assert "lat,lon" in result.output
+
+    def test_info_without_database(self, tmp_path, monkeypatch):
+        """Test info fails helpfully when no database exists."""
+        monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
+        runner = CliRunner()
+        result = runner.invoke(cli, ["-d", str(tmp_path / "nope.sqlite"), "info"])
+        assert result.exit_code == 1
+        assert "setup" in result.output
+
     def test_process_help(self):
         """Test process --help."""
         runner = CliRunner()

@@ -7,7 +7,9 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Docs](https://github.com/gojiplus/get-weather-data/actions/workflows/docs.yml/badge.svg)](https://gojiplus.github.io/get-weather-data/)
 
-Get historical weather data for US ZIP codes. Uses NOAA weather station data (GHCN Daily and GSOD) with automatic station selection based on proximity.
+Historical daily weather for any US ZIP code or latitude/longitude.
+NOAA station data (GHCN Daily and GSOD), automatic nearest-station
+selection, consistent metric or imperial output.
 
 ## Installation
 
@@ -28,16 +30,23 @@ uv pip install get-weather-data
 ```python
 from get_weather_data import Weather
 
-# Initialize and set up database (downloads ~50MB first time)
+# Initialize and set up database (downloads ~60MB first time)
 weather = Weather()
 weather.setup()
 
-# Get weather for a ZIP code and date
+# By ZIP code...
 result = weather.get("10001", "2024-01-15")
+print(f"Max temp: {result.tmax} °C")  # e.g. -1.6
+print(f"Precip:  {result.prcp} mm")  # 0.0 means zero, None means no data
+print(f"Station: {result.station_name} ({result.station_distance_meters} m away)")
 
-print(f"Max temp: {result.tmax / 10:.1f} °C")
-print(f"Min temp: {result.tmin / 10:.1f} °C")
-print(f"Station: {result.station_name}")
+# ...or by coordinates
+result = weather.get((40.7484, -73.9967), "2024-01-15")
+
+# Imperial units if you want them
+weather_f = Weather(units="imperial")
+result = weather_f.get("10001", "2024-01-15")
+print(f"Max temp: {result.tmax} °F")
 ```
 
 ### Command Line
@@ -46,8 +55,9 @@ print(f"Station: {result.station_name}")
 # Set up database (first time only)
 get-weather setup
 
-# Get weather for a location and date
+# By ZIP or by coordinates; metric by default
 get-weather get 10001 2024-01-15
+get-weather get "40.75,-73.99" 2024-01-15 --units imperial
 
 # Process a CSV file
 get-weather process input.csv output.csv
@@ -75,17 +85,24 @@ Notes on online mode:
 
 - Tokens are limited to 5 requests/second and 10,000 requests/day, so
   `process_csv` (batch jobs) requires the local database.
-- Results match the bulk path: nearest reporting station first, values
-  in GHCN raw units, real station distances.
+- Same result contract as the local path: nearest reporting station
+  first, same units, real station distances. Online covers GHCN
+  stations only (no GSOD fallback).
 
 ## Features
 
-- **Simple API**: One class, three methods: `setup()`, `get()`, `process_csv()`
-- **Automatic station selection**: Finds nearest weather stations for each ZIP code
-- **Two data sources**: GHCN Daily (~100K US stations) and GSOD (~3K stations)
-- **Batch processing**: Process CSV files with ZIP codes and dates
-- **Local database**: SQLite database for fast repeated queries
-- **CLI tool**: Command-line interface for quick lookups
+- **ZIP or lat/lon everywhere**: `get()`, `get_range()`, CSV batch, and
+  the CLI all take either a ZIP code or coordinates
+- **Consistent units**: real metric values (°C, mm, m/s) across the
+  API, CLI, and CSV output — or `units="imperial"` (°F, in, mph)
+- **Automatic station selection**: nearest station first, farther
+  stations fill in missing variables
+- **Two data sources**: GHCN Daily (~93K US/CA/MX stations) and GSOD
+  (~9K airport stations)
+- **Robust batch processing**: streams CSVs in chunks, one bad row gets
+  a `weather_error` note instead of killing the job
+- **Cache management**: TTL-based refresh of station lists,
+  `get-weather cache info` / `cache clear`
 
 ## Usage Examples
 
@@ -98,13 +115,14 @@ from get_weather_data import Weather
 weather = Weather()
 
 results = weather.get_range(
-    zipcode="90210",
+    "90210",
     start_date=date(2024, 7, 1),
     end_date=date(2024, 7, 7),
 )
 
 for r in results:
-    print(f"{r.date}: High {r.tmax / 10:.0f}°C, Low {r.tmin / 10:.0f}°C")
+    if r.tmax is not None:
+        print(f"{r.date}: High {r.tmax:.0f}°C")
 ```
 
 ### Process a CSV File
@@ -114,54 +132,73 @@ from get_weather_data import Weather
 
 weather = Weather()
 
-# Input CSV should have zip, year, month, day columns
+# ZIP-based input (zip, year, month, day columns)
+weather.process_csv("locations.csv", "with_weather.csv")
+
+# Coordinate-based input
 weather.process_csv(
-    input_path="locations.csv",
-    output_path="locations_with_weather.csv",
-    zipcode_column="zip",
-    year_column="year",
-    month_column="month",
-    day_column="day",
+    "points.csv",
+    "with_weather.csv",
+    lat_column="lat",
+    lon_column="lon",
+    date_column="date",
 )
 ```
 
-More examples in the [examples/](examples/) directory.
-
-## Data Sources
-
-This package uses data from NOAA's National Centers for Environmental Information:
-
-- **GHCN Daily**: Global Historical Climatology Network daily summaries
-- **GSOD**: Global Summary of the Day from USAF/WBAN stations
-- **GeoNames**: ZIP code to coordinates mapping
+Output rows carry the weather columns below (already in your chosen
+units), plus `weather_error` explaining any row that could not be
+resolved. More examples in the [examples/](examples/) directory.
 
 ## Weather Variables
 
-| Variable | Description | Unit |
-|----------|-------------|------|
-| `tmax` | Maximum temperature | tenths of °C |
-| `tmin` | Minimum temperature | tenths of °C |
-| `tavg` | Average temperature | tenths of °C |
-| `prcp` | Precipitation | tenths of mm |
-| `snow` | Snowfall | mm |
-| `snwd` | Snow depth | mm |
-| `awnd` | Average wind speed | tenths of m/s |
+All values are floats in the units below (or their imperial
+equivalents); `None`/empty means the station network had no reading —
+a genuine zero is reported as `0.0`.
 
-## Database Setup
+| Variable | Description | Metric | Imperial |
+|----------|-------------|--------|----------|
+| `tmax` | Maximum temperature | °C | °F |
+| `tmin` | Minimum temperature | °C | °F |
+| `tavg` | Average temperature | °C | °F |
+| `tobs` | Temperature at observation time | °C | °F |
+| `prcp` | Precipitation | mm | in |
+| `snow` | Snowfall (GHCN stations only) | mm | in |
+| `snwd` | Snow depth | mm | in |
+| `awnd` | Average wind speed | m/s | mph |
 
-The first time you run `setup()`, the package downloads:
+## Data Sources
 
-- GHCN station list (~20K US stations)
-- ISD station list (~3K US stations)
-- US ZIP code coordinates from GeoNames
+This package uses data from NOAA's National Centers for Environmental
+Information:
 
-Then it builds an index mapping each ZIP code to nearby weather stations. This takes a few minutes but only needs to be done once.
+- **GHCN Daily**: Global Historical Climatology Network daily
+  summaries (~93K stations across the US, Canada, and Mexico —
+  border ZIPs get the truly nearest station)
+- **GSOD**: Global Summary of the Day from USAF/WBAN airport stations
+  (~9K); GSOD reports no snowfall, so `snow` comes from GHCN stations
+- **GeoNames**: ZIP code to coordinates mapping
+
+## Database Setup and Disk Use
+
+`setup()` downloads the station lists and ZIP coordinates (~60MB) and
+builds a nearest-stations index; it takes a few minutes, once. Station
+lists refresh automatically when older than 30 days.
+
+Weather data itself is fetched lazily per year: each GHCN year you
+touch builds a local SQLite file (roughly 1–3 GB for recent years);
+GSOD adds one small CSV per station-year. Historical years never
+re-download; the current and previous year refresh monthly. Inspect or
+reclaim space anytime:
+
+```bash
+get-weather cache info
+get-weather cache clear --ghcn        # or --gsod / --stations / --all
+```
 
 ```python
 weather = Weather()
-weather.setup()  # Downloads data, builds index
+weather.setup()
 
-# Check what was imported
 info = weather.info()
 print(f"GHCN stations: {info['ghcn_stations']:,}")
 print(f"USAF stations: {info['usaf_stations']:,}")
@@ -181,6 +218,19 @@ Or via CLI:
 ```bash
 get-weather --database /path/to/my.db setup
 ```
+
+## Upgrading from v3
+
+v4 is a breaking release:
+
+- **Values are now real metric floats** (°C, mm, m/s) everywhere —
+  previously the Python API returned raw GHCN tenths. Divide-by-10
+  code should be removed.
+- **Run `get-weather setup --force`** (or `weather.setup(force=True)`)
+  after upgrading: v4 fixes a nearest-station ranking bug, so indexes
+  built by v3 contain wrong distances.
+- `WeatherResult` gained `tobs`, `latitude`, `longitude`, and `units`;
+  it is now importable from the package root.
 
 ## License
 

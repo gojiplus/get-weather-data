@@ -21,6 +21,6 @@ print("Weather for Beverly Hills (90210), July 1-7, 2024")
 print("-" * 50)
 
 for r in results:
-    tmax = f"{r.tmax / 10:.0f}°C" if r.tmax else "N/A"
-    tmin = f"{r.tmin / 10:.0f}°C" if r.tmin else "N/A"
+    tmax = f"{r.tmax:.0f}°C" if r.tmax is not None else "N/A"
+    tmin = f"{r.tmin:.0f}°C" if r.tmin is not None else "N/A"
     print(f"{r.date}: High {tmax}, Low {tmin}")

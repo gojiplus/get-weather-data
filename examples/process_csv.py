@@ -5,6 +5,7 @@ This example shows how to batch process a CSV file.
 """
 
 import csv
+import tempfile
 from pathlib import Path
 
 from get_weather_data import Weather
@@ -17,12 +18,12 @@ sample_data = """id,zip,year,month,day,event
 """
 
 # Write sample input
-input_file = Path("/tmp/weather_input.csv")
+input_file = Path(tempfile.gettempdir()) / "weather_input.csv"
 input_file.write_text(sample_data)
 
 # Process
 weather = Weather()
-output_file = Path("/tmp/weather_output.csv")
+output_file = Path(tempfile.gettempdir()) / "weather_output.csv"
 
 rows = weather.process_csv(
     input_path=input_file,

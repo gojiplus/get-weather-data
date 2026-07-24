@@ -82,13 +82,13 @@ def display_results(path: Path) -> None:
             print(f"  Distance: {int(row['station_distance_meters']):,} m")
 
             if row["tmax"]:
-                tmax_c = float(row["tmax"]) / 10
+                tmax_c = float(row["tmax"])
                 print(f"  Max Temp: {tmax_c:.1f}°C ({tmax_c * 9 / 5 + 32:.1f}°F)")
             if row["tmin"]:
-                tmin_c = float(row["tmin"]) / 10
+                tmin_c = float(row["tmin"])
                 print(f"  Min Temp: {tmin_c:.1f}°C ({tmin_c * 9 / 5 + 32:.1f}°F)")
             if row["prcp"]:
-                print(f"  Precipitation: {float(row['prcp']) / 10:.1f} mm")
+                print(f"  Precipitation: {float(row['prcp']):.1f} mm")
         else:
             print("  No weather data available")
         print()
