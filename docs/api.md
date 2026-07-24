@@ -18,8 +18,6 @@ unit system named by ``units`` (metric: °C/mm/m/s; imperial:
 
 ```{eval-rst}
 .. autoclass:: get_weather_data.WeatherResult
-   :members:
-   :undoc-members:
 ```
 
 ## OnlineLookup
