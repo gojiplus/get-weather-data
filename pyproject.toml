@@ -7,6 +7,7 @@ name = "get-weather-data"
 description = "Get historical weather data for US ZIP codes from NOAA stations"
 readme = "README.md"
 license = "MIT"
+license-files = ["LICENSE"]
 authors = [
     { name = "Suriyan Laohaprapanon", email = "suriyant@gmail.com" },
     { name = "Gaurav Sood", email = "gsood07@gmail.com" },
@@ -16,7 +17,6 @@ classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -29,7 +29,6 @@ dependencies = [
     "click>=8.1",
     "rich>=13.0",
     "httpx>=0.27",
-    "defusedxml>=0.7",
 ]
 dynamic = ["version"]
 
@@ -72,7 +71,7 @@ ignore = ["D203", "D213"]
 convention = "google"
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S101", "D"]
+"tests/**" = ["S101", "S105", "S106", "D"]
 "examples/**" = ["T20", "S", "D"]  # demo scripts: prints and literal paths are the point
 "docs/**" = ["D"]
 

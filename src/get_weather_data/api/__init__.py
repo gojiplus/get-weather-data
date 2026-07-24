@@ -1,8 +1,9 @@
 """NOAA API access module."""
 
-from get_weather_data.api.noaa import NOAAClient, get_ghcnd_by_zip
+from get_weather_data.api.noaa import NOAAAPIError, NOAAClient, StationInfo
 
 __all__ = [
+    "NOAAAPIError",
     "NOAAClient",
-    "get_ghcnd_by_zip",
+    "StationInfo",
 ]

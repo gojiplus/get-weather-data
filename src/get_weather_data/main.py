@@ -16,6 +16,7 @@ from get_weather_data.stations import (
 )
 from get_weather_data.weather.batch import process_csv as _process_csv
 from get_weather_data.weather.lookup import WeatherLookup, WeatherResult
+from get_weather_data.weather.online import OnlineLookup
 
 logger = logging.getLogger("get_weather_data")
 
@@ -33,22 +34,36 @@ class Weather:
         weather = Weather()
         weather.setup()
         result = weather.get("10001", "2024-01-15")
+
+    With online=True, get() and get_range() query the NOAA CDO API
+    directly — no setup() download (just a small cached ZIP-coordinates
+    file), but NCDC_TOKEN must be set.
     """
 
     database_path: Path | str | None = None
     verbose: bool = False
+    online: bool = False
     _db: Database | None = field(default=None, repr=False)
     _lookup: WeatherLookup | None = field(default=None, repr=False)
+    _online_lookup: OnlineLookup | None = field(default=None, repr=False)
 
     def __post_init__(self) -> None:
-        """Configure logging and validate the selected dataset."""
+        """Configure logging and build the selected lookup backend.
+
+        Raises:
+            ValueError: If online=True and no NCDC token is configured.
+        """  # noqa: DOC502 - raised by OnlineLookup/NOAAClient construction
         setup_logging(verbose=self.verbose)
 
         if self.database_path:
             config = Config(_database_path=Path(self.database_path))
             set_config(config)
 
-        self._db = Database(self.database_path)
+        if self.online:
+            # Fail fast on a missing token, and skip the local database
+            self._online_lookup = OnlineLookup()
+        else:
+            self._db = Database(self.database_path)
 
     @property
     def db(self) -> Database:
@@ -134,6 +149,8 @@ class Weather:
         if isinstance(target_date, str):
             target_date = date.fromisoformat(target_date)
 
+        if self._online_lookup is not None:
+            return self._online_lookup.get_weather(zipcode, target_date, elements)
         return self.lookup.get_weather(zipcode, target_date, elements)
 
     def get_range(
@@ -159,6 +176,10 @@ class Weather:
         if isinstance(end_date, str):
             end_date = date.fromisoformat(end_date)
 
+        if self._online_lookup is not None:
+            return self._online_lookup.get_weather_range(
+                zipcode, start_date, end_date, elements
+            )
         return self.lookup.get_weather_range(zipcode, start_date, end_date, elements)
 
     def process_csv(
@@ -188,7 +209,18 @@ class Weather:
 
         Returns:
             Number of rows processed.
+
+        Raises:
+            ValueError: If this Weather was created with online=True —
+                batch jobs need the local database (the CDO API allows
+                only 10,000 requests per day).
         """
+        if self.online:
+            raise ValueError(
+                "process_csv requires the local database (run setup()); "
+                "online mode is impractical for batch jobs given the CDO "
+                "API quota of 10,000 requests/day."
+            )
         return _process_csv(
             input_path=Path(input_path),
             output_path=Path(output_path),

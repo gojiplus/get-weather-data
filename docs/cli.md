@@ -27,6 +27,14 @@ get-weather get 10001 2024-01-15
 
 Output shows temperature, precipitation, and station info in a table.
 
+With `--online`, the query goes straight to the NOAA CDO API — no
+`setup` needed, but `NCDC_TOKEN` must be set
+(free token: <https://www.ncdc.noaa.gov/cdo-web/token>):
+
+```bash
+get-weather get 10001 2024-01-15 --online
+```
+
 ## Process CSV
 
 Add weather data to a CSV file:

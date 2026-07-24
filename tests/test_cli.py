@@ -1,8 +1,12 @@
 """Tests for CLI commands."""
 
+import respx
 from click.testing import CliRunner
+from httpx import Response
 
+from get_weather_data.api.noaa import CDO_BASE_URL
 from get_weather_data.cli import cli
+from get_weather_data.core.config import Config, set_config
 
 
 class TestCli:
@@ -35,6 +39,71 @@ class TestCli:
         result = runner.invoke(cli, ["get", "--help"])
         assert result.exit_code == 0
         assert "Get weather data for a ZIP code" in result.output
+
+    def test_get_help_mentions_online(self):
+        """Test that get --help documents the --online flag."""
+        runner = CliRunner()
+        result = runner.invoke(cli, ["get", "--help"])
+        assert result.exit_code == 0
+        assert "--online" in result.output
+
+    @respx.mock
+    def test_get_online(self, monkeypatch):
+        """Test online get against a mocked CDO API."""
+        monkeypatch.setenv("NCDC_TOKEN", "test-token")
+        monkeypatch.setattr(
+            "get_weather_data.weather.online._default_zip_coordinates",
+            lambda: {"10001": (40.7484, -73.9967)},
+        )
+        set_config(Config())
+        station = "GHCND:USW00094728"
+        respx.get(f"{CDO_BASE_URL}/stations").mock(
+            return_value=Response(
+                200,
+                json={
+                    "metadata": {"resultset": {"offset": 1, "count": 1, "limit": 1000}},
+                    "results": [
+                        {
+                            "id": station,
+                            "name": "NY CITY CENTRAL PARK",
+                            "latitude": 40.78,
+                            "longitude": -73.97,
+                        }
+                    ],
+                },
+            )
+        )
+        respx.get(f"{CDO_BASE_URL}/data").mock(
+            return_value=Response(
+                200,
+                json={
+                    "metadata": {"resultset": {"offset": 1, "count": 1, "limit": 1000}},
+                    "results": [
+                        {
+                            "date": "2024-01-15T00:00:00",
+                            "datatype": "TMAX",
+                            "station": station,
+                            "attributes": "",
+                            "value": 44,
+                        }
+                    ],
+                },
+            )
+        )
+        runner = CliRunner()
+        result = runner.invoke(cli, ["get", "10001", "2024-01-15", "--online"])
+        assert result.exit_code == 0
+        assert "NY CITY CENTRAL PARK" in result.output
+
+    def test_get_online_without_token(self, monkeypatch):
+        """Test online get fails cleanly without a token."""
+        monkeypatch.delenv("NCDC_TOKEN", raising=False)
+        set_config(Config(ncdc_token=None))
+        runner = CliRunner()
+        result = runner.invoke(cli, ["get", "10001", "2024-01-15", "--online"])
+        assert result.exit_code == 1
+        assert "Error:" in result.output
+        assert "cdo-web/token" in result.output
 
     def test_process_help(self):
         """Test process --help."""

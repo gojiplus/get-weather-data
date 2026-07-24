@@ -20,6 +20,29 @@ Data returned from weather queries.
    :undoc-members:
 ```
 
+## OnlineLookup
+
+Database-free lookup backed by the NOAA CDO Web Services v2 API
+(used when `Weather(online=True)`; requires `NCDC_TOKEN`). Stations
+are resolved from ZIP centroids (small cached GeoNames file), nearest
+first, so results carry real station distances.
+
+```{eval-rst}
+.. autoclass:: get_weather_data.weather.online.OnlineLookup
+   :members:
+   :undoc-members:
+```
+
+## NOAAClient
+
+Low-level CDO v2 API client.
+
+```{eval-rst}
+.. autoclass:: get_weather_data.api.NOAAClient
+   :members:
+   :undoc-members:
+```
+
 ## Database
 
 Low-level database operations.

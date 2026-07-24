@@ -77,19 +77,24 @@ def setup(
 @cli.command()
 @click.argument("zipcode")
 @click.argument("target_date")
+@click.option(
+    "--online",
+    is_flag=True,
+    help="Query the NOAA CDO API directly (no local database; requires NCDC_TOKEN)",
+)
 @click.pass_context
-def get(ctx: click.Context, zipcode: str, target_date: str) -> None:
+def get(ctx: click.Context, zipcode: str, target_date: str, online: bool) -> None:
     """Get weather data for a ZIP code and date.
 
     ZIPCODE: 5-digit US ZIP code (e.g., 10001)
     TARGET_DATE: Date in YYYY-MM-DD format (e.g., 2024-01-15)
     """
-    weather = Weather(
-        database_path=ctx.obj["database"],
-        verbose=ctx.obj["verbose"],
-    )
-
     try:
+        weather = Weather(
+            database_path=ctx.obj["database"],
+            verbose=ctx.obj["verbose"],
+            online=online,
+        )
         result = weather.get(zipcode, target_date)
     except Exception as e:
         console.print(f"[red]Error: {e}[/red]")

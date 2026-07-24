@@ -53,6 +53,31 @@ get-weather get 10001 2024-01-15
 get-weather process input.csv output.csv
 ```
 
+### Online Mode (no setup)
+
+Skip the station-database build by querying NOAA's Climate Data Online
+API directly (only a small ZIP-coordinates file, a few MB, is cached on
+first use). Get a free token at
+<https://www.ncdc.noaa.gov/cdo-web/token> and set `NCDC_TOKEN`:
+
+```python
+from get_weather_data import Weather
+
+weather = Weather(online=True)  # requires NCDC_TOKEN
+result = weather.get("10001", "2024-01-15")
+```
+
+```bash
+NCDC_TOKEN=your-token get-weather get 10001 2024-01-15 --online
+```
+
+Notes on online mode:
+
+- Tokens are limited to 5 requests/second and 10,000 requests/day, so
+  `process_csv` (batch jobs) requires the local database.
+- Results match the bulk path: nearest reporting station first, values
+  in GHCN raw units, real station distances.
+
 ## Features
 
 - **Simple API**: One class, three methods: `setup()`, `get()`, `process_csv()`

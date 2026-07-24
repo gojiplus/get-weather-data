@@ -6,9 +6,25 @@
 pip install get-weather-data
 ```
 
+## Online mode (no setup)
+
+If you have a free NOAA token (<https://www.ncdc.noaa.gov/cdo-web/token>,
+set it as `NCDC_TOKEN`), you can query the CDO API directly — no
+station-database build, just a small cached ZIP-coordinates file:
+
+```python
+from get_weather_data import Weather
+
+weather = Weather(online=True)
+result = weather.get("10001", "2024-01-15")
+```
+
+Online mode is rate-limited (5 requests/second, 10,000/day); batch CSV
+processing requires the local database below.
+
 ## Setup
 
-The first time you use the package, run setup to download station data:
+For batch work or offline use, run setup once to download station data:
 
 ```python
 from get_weather_data import Weather
