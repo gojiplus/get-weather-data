@@ -48,14 +48,15 @@ def parse_ghcnd_stations(file_path: Path) -> list[Station]:
         file_path: Path to ghcnd-stations.txt
 
     Returns:
-        List of Station objects for US stations only.
+        List of Station objects for US, Canadian, and Mexican stations.
     """
     stations = []
 
     with open(file_path, encoding="utf-8", errors="replace") as f:
         for line in f:
-            # Only include US stations
-            if not line.startswith("US"):
+            # US plus Canada/Mexico: for border ZIPs the nearest
+            # station is often across the line
+            if line[:2] not in ("US", "CA", "MX"):
                 continue
 
             try:

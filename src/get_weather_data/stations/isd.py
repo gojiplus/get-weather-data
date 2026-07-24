@@ -50,15 +50,15 @@ def parse_isd_stations(file_path: Path) -> list[Station]:
         file_path: Path to isd-history.csv
 
     Returns:
-        List of Station objects for US stations only.
+        List of Station objects for US, Canadian, and Mexican stations.
     """
     stations = []
 
     with open(file_path, encoding="utf-8", errors="replace") as f:
         reader = csv.DictReader(f)
         for row in reader:
-            # Only include US stations
-            if row.get("CTRY") != "US":
+            # US plus Canada/Mexico for border coverage
+            if row.get("CTRY") not in ("US", "CA", "MX"):
                 continue
 
             try:
