@@ -319,6 +319,78 @@ class TestOnlineLookup:
         assert second["startdate"] == "2024-01-01"
 
 
+class TestOnlineRobustness:
+    """Extent widening, station-list caching, and info() guards."""
+
+    def _lookup(self, **kwargs) -> OnlineLookup:
+        kwargs.setdefault("client", _client())
+        kwargs.setdefault(
+            "zip_coordinates_loader", lambda: {"10001": (40.7484, -73.9967)}
+        )
+        return OnlineLookup(**kwargs)
+
+    @respx.mock
+    def test_extent_widens_until_stations_found(self):
+        empty = {
+            "metadata": {"resultset": {"offset": 1, "count": 0, "limit": 1000}},
+            "results": [],
+        }
+        found = {
+            "metadata": {"resultset": {"offset": 1, "count": 1, "limit": 1000}},
+            "results": [
+                {
+                    "id": STATION,
+                    "name": "LONELY STATION",
+                    "latitude": 41.0,
+                    "longitude": -74.0,
+                }
+            ],
+        }
+        stations_route = respx.get(f"{CDO_BASE_URL}/stations").mock(
+            side_effect=[
+                Response(200, json=empty),
+                Response(200, json=found),
+            ]
+        )
+        respx.get(DATA_URL).mock(
+            return_value=Response(200, json=_data_payload([_record("TMAX", 10)]))
+        )
+        result = self._lookup().get_weather("10001", date(2024, 1, 15))
+        assert stations_route.call_count == 2
+        assert result.station_id == "USW00094728"
+
+    @respx.mock
+    def test_station_list_cached_for_nearby_queries(self):
+        stations_route = respx.get(f"{CDO_BASE_URL}/stations").mock(
+            return_value=Response(
+                200,
+                json={
+                    "metadata": {"resultset": {"offset": 1, "count": 1, "limit": 1000}},
+                    "results": [
+                        {
+                            "id": STATION,
+                            "name": "S",
+                            "latitude": 40.78,
+                            "longitude": -73.97,
+                        }
+                    ],
+                },
+            )
+        )
+        respx.get(DATA_URL).mock(return_value=Response(200, json=_data_payload([])))
+        lookup = self._lookup()
+        lookup.get_weather((40.7501, -73.9902), date(2024, 1, 15))
+        lookup.get_weather((40.7502, -73.9901), date(2024, 3, 1))
+        assert stations_route.call_count == 1
+
+    def test_info_raises_in_online_mode(self, monkeypatch):
+        monkeypatch.setenv("NCDC_TOKEN", "test-token")
+        set_config(Config())
+        weather = Weather(online=True)
+        with pytest.raises(RuntimeError, match="online=True"):
+            weather.info()
+
+
 class TestWeatherOnline:
     """End-to-end through the Weather facade."""
 
