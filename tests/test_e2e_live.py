@@ -47,7 +47,8 @@ def test_buffalo_2022_blizzard():
     assert max(depths) > 300  # snowpack over 300 mm (~12 in)
     # temperature must be reached despite the dense CoCoRaHS network
     tmins = [r.tmin for r in results if r.tmin is not None]
-    assert tmins and min(tmins) < -5.0
+    assert tmins
+    assert min(tmins) < -5.0
 
 
 @online_only
