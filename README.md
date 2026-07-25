@@ -109,6 +109,9 @@ Notes on online mode:
   dew point, pressures, and visibility
 - **Quality-controlled**: values that failed NOAA's QC are dropped by
   default; `include_flags=True` surfaces the per-field QC flag
+- **Present weather**: `include_weather_types=True` reports the day's
+  phenomena (fog, thunder, hail, freezing rain, ...) from GHCN `WT**`
+  codes and GSOD's `FRSHTT` indicator
 - **Automatic station selection**: nearest station first, farther
   stations fill in missing variables; `coverage(...)` reports how well
   a point is served
@@ -226,6 +229,25 @@ a genuine zero is reported as `0.0`.
 
 With `include_flags=True`, `result.flags` maps each field to its GHCN
 quality-control flag (blank = passed all checks; GHCN stations only).
+
+### Present-weather types
+
+The numeric variables above say how much rain fell but not whether it
+was *thunder*, *freezing rain*, or *fog*. With
+`include_weather_types=True`, `result.weather_types` is a set of the
+day's phenomena, drawn from GHCN `WT**` occurrence codes (fog, thunder,
+hail, glaze, blowing snow, ...) and, for GSOD airport stations, the
+`FRSHTT` indicator (fog / rain / snow / hail / thunder / tornado):
+
+```python
+w = Weather(online=True, include_weather_types=True)
+r = w.get("11430", "2023-07-16")   # JFK on a stormy afternoon
+print(sorted(r.weather_types))     # ['fog', 'heavy_fog', 'thunder']
+```
+
+`get-weather get <loc> <date> --weather-types` shows them on the CLI,
+and `process --weather-types` adds a comma-joined `weather_types`
+column to the batch CSV.
 
 ## Which backend?
 

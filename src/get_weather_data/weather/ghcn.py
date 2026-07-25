@@ -12,6 +12,7 @@ from pathlib import Path
 from get_weather_data.core.cache import is_fresh, year_is_immutable
 from get_weather_data.core.config import get_config
 from get_weather_data.core.download import download_with_retry
+from get_weather_data.weather.weather_types import WT_CODES
 
 logger = logging.getLogger("get_weather_data")
 
@@ -244,3 +245,18 @@ def get_ghcn_flags(
         elements = GHCN_ELEMENTS
     rows = _read_ghcn_rows(station_id, target_date, elements)
     return {element: q_flag for element, (_value, q_flag) in rows.items()}
+
+
+def get_ghcn_weather_types(station_id: str, target_date: date) -> set[str]:
+    """Get present-weather phenomena for a GHCN station and date.
+
+    Args:
+        station_id: GHCN station ID.
+        target_date: Date to read.
+
+    Returns:
+        Set of phenomenon names (e.g. {"fog", "thunder"}) from the day's
+        WT** occurrence codes.
+    """
+    rows = _read_ghcn_rows(station_id, target_date, list(WT_CODES))
+    return {WT_CODES[code] for code in rows if code in WT_CODES}

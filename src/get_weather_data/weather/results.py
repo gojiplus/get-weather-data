@@ -43,6 +43,8 @@ class WeatherResult:
         flags: Per-field GHCN quality-control flag, when include_flags is
             set; a blank flag means the value passed all QC checks
             (GHCN stations only).
+        weather_types: Present-weather phenomena for the day (e.g.
+            {"fog", "thunder"}), when include_weather_types is set.
     """
 
     date: date_type
@@ -68,6 +70,7 @@ class WeatherResult:
     station_pressure: float | None = None
     visibility: float | None = None
     flags: dict[str, str] | None = None
+    weather_types: set[str] | None = None
 
 
 @dataclass

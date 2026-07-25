@@ -62,6 +62,7 @@ class Weather:
     online: bool = False
     units: Units = "metric"
     include_flags: bool = False
+    include_weather_types: bool = False
     interpolate: bool = False
     source: Source = "station"
     _db: Database | None = field(default=None, repr=False)
@@ -83,7 +84,10 @@ class Weather:
 
         if self.online:
             # Fail fast on a missing token, and skip the local database
-            self._online_lookup = OnlineLookup(units=self.units)
+            self._online_lookup = OnlineLookup(
+                units=self.units,
+                include_weather_types=self.include_weather_types,
+            )
         else:
             self._db = Database(self.database_path)
 
@@ -102,6 +106,7 @@ class Weather:
                 db=self.db,
                 units=self.units,
                 include_flags=self.include_flags,
+                include_weather_types=self.include_weather_types,
                 interpolate=self.interpolate,
             )
         return self._lookup
@@ -357,6 +362,7 @@ class Weather:
             day_column=day_column,
             db=self.db,
             units=self.units,
+            include_weather_types=self.include_weather_types,
             parallel=parallel,
             max_workers=max_workers,
         )

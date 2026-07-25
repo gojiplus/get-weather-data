@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any
 
 from get_weather_data.weather.results import WeatherResult
 from get_weather_data.weather.units import ELEMENTS
+from get_weather_data.weather.weather_types import format_weather_types
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -72,6 +73,12 @@ def results_to_frame(results: Sequence[WeatherResult]) -> "pd.DataFrame":
     rows = [
         {column: getattr(result, column) for column in columns} for result in results
     ]
+    # Present-weather phenomena are only collected on request; add the
+    # column (comma-joined, sorted) only when at least one result has it.
+    if any(result.weather_types is not None for result in results):
+        columns = [*columns, "weather_types"]
+        for row, result in zip(rows, results, strict=True):
+            row["weather_types"] = format_weather_types(result.weather_types)
     frame = pd.DataFrame(rows, columns=columns)
     frame["date"] = pd.to_datetime(frame["date"])
     return frame
