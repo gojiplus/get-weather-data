@@ -2,6 +2,19 @@
 
 Notable changes to get-weather-data. Versions follow the git tags.
 
+## 5.3.0
+
+Added
+
+- Missing-data provenance: `Weather(explain=True)` populates
+  `result.stations_considered` and `result.missing` — a per-field
+  reason each requested value is absent (station coverage, distance
+  cap, unknown ZIP, ...), on both the station and online backends.
+  Surfaced via `get --explain`, `process --explain` (adds
+  `stations_considered` and `missing` CSV columns), and `get_frame`.
+- A `debug`-level log line naming the fields still missing after the
+  station walk, for `verbose=True` diagnosis.
+
 ## 5.2.0
 
 Added

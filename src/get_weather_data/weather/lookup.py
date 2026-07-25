@@ -101,6 +101,7 @@ class WeatherLookup:
     use_cache: bool = True
     include_flags: bool = False
     include_weather_types: bool = False
+    explain: bool = False
     interpolate: bool = False
     idw_power: float = 2.0
     interpolate_stations: int = 5
@@ -149,9 +150,14 @@ class WeatherLookup:
             coords = self.db.get_zipcode(zipcode)
             if coords is None:
                 logger.warning(f"ZIP code {zipcode} not found in database")
-                return WeatherResult(
+                result = WeatherResult(
                     date=target_date, zipcode=zipcode, units=self.units
                 )
+                if self.explain:
+                    reason = f"ZIP code {zipcode} is not in the station database"
+                    result.stations_considered = 0
+                    result.missing = {ELEMENTS[e].field: reason for e in requested}
+                return result
             lat, lon = coords
             closest = self._closest_stations_for_zip(zipcode, lat, lon)
         else:
@@ -175,9 +181,13 @@ class WeatherLookup:
         flags: dict[str, str] = {}
         weather_types: set[str] = set()
         station = StationMeta()
+        considered = 0
+        last_distance: int | None = None
+        stopped_at_max_distance = False
 
         for station_id, distance in closest[: self.max_stations]:
             if self.max_distance_meters and distance > self.max_distance_meters:
+                stopped_at_max_distance = True
                 break
             if all(element in values for element in requested):
                 break
@@ -186,6 +196,8 @@ class WeatherLookup:
             if not station_info:
                 continue
             station_name, station_type = station_info
+            considered += 1
+            last_distance = distance
 
             if self.include_weather_types:
                 weather_types |= self._station_weather_types(
@@ -213,6 +225,16 @@ class WeatherLookup:
                     station_distance_meters=distance,
                 )
 
+        still_missing = [e for e in requested if e not in values]
+        if still_missing:
+            logger.debug(
+                "%s on %s: no value for %s after examining %d station(s)",
+                zipcode or f"{lat:.3f},{lon:.3f}",
+                target_date.strftime("%Y-%m-%d"),
+                ",".join(still_missing),
+                considered,
+            )
+
         result = assemble_result(
             target_date=target_date,
             metric_values=values,
@@ -228,7 +250,67 @@ class WeatherLookup:
             result.flags = {ELEMENTS[e].field: f for e, f in flags.items()}
         if self.include_weather_types:
             result.weather_types = weather_types
+        if self.explain:
+            result.stations_considered = considered
+            result.missing = self._missing_reasons(
+                requested,
+                values,
+                target_date,
+                considered,
+                last_distance,
+                stopped_at_max_distance,
+            )
         return result
+
+    def _missing_reasons(
+        self,
+        requested: list[str],
+        values: dict[str, float],
+        target_date: date,
+        considered: int,
+        last_distance: int | None,
+        stopped_at_max_distance: bool,
+    ) -> dict[str, str]:
+        """Explain, per requested field, why no value was found.
+
+        Args:
+            requested: Element codes that were asked for.
+            values: Element codes that were resolved to a value.
+            target_date: The queried date (named in each reason).
+            considered: Stations examined during the walk.
+            last_distance: Distance of the farthest station examined.
+            stopped_at_max_distance: Whether the walk halted at the
+                max_distance_meters limit.
+
+        Returns:
+            Field name -> reason string for each requested element with
+            no value; empty when everything requested was found.
+        """
+        missing = [e for e in requested if e not in values]
+        if not missing:
+            return {}
+
+        if considered == 0:
+            summary = "no weather stations were found near this location"
+        elif stopped_at_max_distance and self.max_distance_meters:
+            summary = (
+                f"no station within the {self.max_distance_meters / 1000:.0f} km limit"
+            )
+        else:
+            span = (
+                f" (out to {last_distance / 1000:.0f} km)"
+                if last_distance is not None
+                else ""
+            )
+            summary = f"none of the {considered} nearest stations{span}"
+
+        date_str = target_date.strftime("%Y-%m-%d")
+        if considered == 0:
+            return dict.fromkeys((ELEMENTS[e].field for e in missing), summary)
+        return {
+            ELEMENTS[e].field: f"{summary} reported {ELEMENTS[e].field} on {date_str}"
+            for e in missing
+        }
 
     def _interpolate(
         self,

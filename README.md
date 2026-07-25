@@ -112,6 +112,9 @@ Notes on online mode:
 - **Present weather**: `include_weather_types=True` reports the day's
   phenomena (fog, thunder, hail, freezing rain, ...) from GHCN `WT**`
   codes and GSOD's `FRSHTT` indicator
+- **Explainable gaps**: `explain=True` tells you *why* a value is
+  missing (`stations_considered` + a per-field `missing` reason) — a
+  blank cell becomes diagnosable, not silent
 - **Automatic station selection**: nearest station first, farther
   stations fill in missing variables; `coverage(...)` reports how well
   a point is served
@@ -248,6 +251,27 @@ print(sorted(r.weather_types))  # ['fog', 'heavy_fog', 'thunder']
 `get-weather get <loc> <date> --weather-types` shows them on the CLI,
 and `process --weather-types` adds a comma-joined `weather_types`
 column to the batch CSV.
+
+### Why is a value missing?
+
+A blank `tmax` could mean many things: no station nearby, a station
+that measures only precipitation, or a gap on that date. With
+`explain=True`, the result carries `stations_considered` and a
+`missing` map giving a reason for each requested field that came back
+empty:
+
+```python
+w = Weather(online=True, explain=True)
+r = w.get("59221", "2023-01-15")  # remote NE Montana
+print(r.stations_considered)  # e.g. 20
+print(r.missing.get("tmax"))
+# 'none of the 20 CDO stations near this point reported tmax on 2023-01-15'
+```
+
+`get --explain` prints the reasons on the CLI, `process --explain` adds
+`stations_considered` and `missing` columns to the batch CSV, and
+`get_frame(...)` includes them when present. (For a data consumer,
+this turns a silent `NaN` into a diagnosable gap.)
 
 ## Which backend?
 

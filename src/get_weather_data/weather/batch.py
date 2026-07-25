@@ -38,11 +38,15 @@ _VALUE_COLUMNS = [spec.field for spec in ELEMENTS.values()]
 WEATHER_COLUMNS = [*_STATION_COLUMNS, *_VALUE_COLUMNS, "weather_error"]
 
 
-def _weather_columns(include_weather_types: bool) -> list[str]:
-    """Output weather columns, optionally including weather_types."""
-    if not include_weather_types:
-        return WEATHER_COLUMNS
-    return [*_STATION_COLUMNS, *_VALUE_COLUMNS, "weather_types", "weather_error"]
+def _weather_columns(include_weather_types: bool, explain: bool = False) -> list[str]:
+    """Output weather columns, optionally with weather_types/provenance."""
+    columns = [*_STATION_COLUMNS, *_VALUE_COLUMNS]
+    if include_weather_types:
+        columns.append("weather_types")
+    if explain:
+        columns += ["stations_considered", "missing"]
+    columns.append("weather_error")
+    return columns
 
 
 @dataclass
@@ -68,6 +72,7 @@ def process_csv(
     db: Database | None = None,
     units: Units = "metric",
     include_weather_types: bool = False,
+    explain: bool = False,
     parallel: bool = True,
     max_workers: int | None = None,
 ) -> int:
@@ -88,6 +93,8 @@ def process_csv(
         units: Unit system for the output values.
         include_weather_types: If True, add a ``weather_types`` column
             with the day's present-weather phenomena (comma-joined).
+        explain: If True, add ``stations_considered`` and ``missing``
+            columns explaining why any requested value is absent.
         parallel: Use parallel processing for faster execution.
         max_workers: Number of worker threads (default: CPU count).
 
@@ -103,9 +110,12 @@ def process_csv(
         max_workers = min(os.cpu_count() or 4, 8)
 
     lookup = WeatherLookup(
-        db=db, units=units, include_weather_types=include_weather_types
+        db=db,
+        units=units,
+        include_weather_types=include_weather_types,
+        explain=explain,
     )
-    weather_columns = _weather_columns(include_weather_types)
+    weather_columns = _weather_columns(include_weather_types, explain)
 
     def parse_row(row: dict[str, str]) -> _Row:
         location: str | tuple[float, float] | None = None
@@ -169,7 +179,7 @@ def process_csv(
 
                 for row_data, result, error in outputs:
                     row_data.update(
-                        _result_to_dict(result, error, include_weather_types)
+                        _result_to_dict(result, error, include_weather_types, explain)
                     )
                     writer.writerow(row_data)
                     if error:
@@ -232,9 +242,10 @@ def _result_to_dict(
     result: WeatherResult | None,
     error: str,
     include_weather_types: bool = False,
+    explain: bool = False,
 ) -> dict[str, str]:
     """Convert a WeatherResult (or an error) to CSV output columns."""
-    columns = _weather_columns(include_weather_types)
+    columns = _weather_columns(include_weather_types, explain)
     if result is None:
         empty = dict.fromkeys(columns, "")
         empty["weather_error"] = error
@@ -243,5 +254,15 @@ def _result_to_dict(
     row.update({field: _cell(getattr(result, field)) for field in _VALUE_COLUMNS})
     if include_weather_types:
         row["weather_types"] = format_weather_types(result.weather_types)
+    if explain:
+        row["stations_considered"] = _cell(result.stations_considered)
+        row["missing"] = _format_missing(result.missing)
     row["weather_error"] = error
     return row
+
+
+def _format_missing(missing: dict[str, str] | None) -> str:
+    """Render a per-field missing-reason map as one compact CSV cell."""
+    if not missing:
+        return ""
+    return "; ".join(f"{field}: {reason}" for field, reason in missing.items())
