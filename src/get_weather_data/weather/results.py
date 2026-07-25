@@ -4,6 +4,7 @@ from collections import Counter
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import date as date_type
+from datetime import datetime
 
 from get_weather_data.weather.units import ELEMENTS, Units, convert
 
@@ -78,6 +79,53 @@ class WeatherResult:
     weather_types: set[str] | None = None
     stations_considered: int | None = None
     missing: dict[str, str] | None = None
+
+
+@dataclass
+class HourlyResult:
+    """One hour of observations at a station (ISD-Lite).
+
+    Value fields are in the unit system named by ``units``:
+    metric — temp/dewpoint in °C, sea_level_pressure in hPa, wind_speed
+    in m/s, precip in mm; imperial — °F, inHg, mph, in. wind_direction
+    is always degrees (0-360). Fields are None when the hour had no
+    reading for that variable.
+
+    Attributes:
+        observed_at: The observation time, in UTC (timezone-aware).
+        zipcode: Queried ZIP code, when the query used one.
+        latitude: Latitude of the resolved query point.
+        longitude: Longitude of the resolved query point.
+        station_id: USAF-WBAN station that supplied the hour.
+        station_name: Its human-readable name.
+        station_distance_meters: Distance from the query point.
+        units: Unit system of the value fields.
+        temp: Air temperature.
+        dewpoint: Dew point temperature.
+        sea_level_pressure: Sea-level pressure.
+        wind_direction: Wind direction in degrees (0-360; 0 = calm/north).
+        wind_speed: Wind speed.
+        sky_condition: Total sky-cover code (ISD-Lite; categorical).
+        precip_1h: Liquid precipitation over the past hour.
+        precip_6h: Liquid precipitation over the past six hours.
+    """
+
+    observed_at: datetime
+    zipcode: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None
+    station_id: str | None = None
+    station_name: str | None = None
+    station_distance_meters: int | None = None
+    units: Units = "metric"
+    temp: float | None = None
+    dewpoint: float | None = None
+    sea_level_pressure: float | None = None
+    wind_direction: int | None = None
+    wind_speed: float | None = None
+    sky_condition: int | None = None
+    precip_1h: float | None = None
+    precip_6h: float | None = None
 
 
 @dataclass
