@@ -2,6 +2,15 @@
 
 Notable changes to get-weather-data. Versions follow the git tags.
 
+## 4.2.0
+
+Added
+
+- `Weather(interpolate=True)` inverse-distance-weights the nearest
+  stations for a queried point instead of taking the single closest
+  station, with an optional temperature lapse-rate correction (active
+  once a query-point elevation is available).
+
 ## 4.1.0
 
 Added

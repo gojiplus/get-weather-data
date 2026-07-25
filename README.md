@@ -104,6 +104,8 @@ Notes on online mode:
 - **Automatic station selection**: nearest station first, farther
   stations fill in missing variables; `coverage(...)` reports how well
   a point is served
+- **Interpolation**: `Weather(interpolate=True)` inverse-distance-weights
+  the nearest stations instead of taking the single closest one
 - **Two data sources**: GHCN Daily (~93K US/CA/MX stations) and GSOD
   (~9K airport stations)
 - **Robust batch processing**: streams CSVs in chunks, one bad row gets
@@ -167,6 +169,18 @@ weather.process_csv(
 Output rows carry the weather columns below (already in your chosen
 units), plus `weather_error` explaining any row that could not be
 resolved. More examples in the [examples/](examples/) directory.
+
+### Interpolate between stations
+
+For a point *between* stations, `interpolate=True` blends the nearest
+stations by inverse-distance weighting rather than returning the single
+closest station's raw value:
+
+```python
+weather = Weather(interpolate=True)
+result = weather.get((40.75, -73.99), "2024-01-15")
+# result.station_type == "interpolated"
+```
 
 ### Check coverage before trusting the numbers
 

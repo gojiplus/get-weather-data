@@ -9,6 +9,7 @@ from get_weather_data.core.database import INDEX_VERSION, Database
 from get_weather_data.core.distance import find_closest
 from get_weather_data.weather.ghcn import get_ghcn_data, get_ghcn_flags
 from get_weather_data.weather.gsod import get_gsod_data
+from get_weather_data.weather.interpolate import Sample, idw
 from get_weather_data.weather.location import LocationInput, parse_location
 from get_weather_data.weather.results import (
     StationMeta,
@@ -95,6 +96,9 @@ class WeatherLookup:
     use_gsod: bool = True
     use_cache: bool = True
     include_flags: bool = False
+    interpolate: bool = False
+    idw_power: float = 2.0
+    interpolate_stations: int = 5
 
     def __post_init__(self) -> None:
         """Preload caches and check the index version."""
@@ -149,6 +153,19 @@ class WeatherLookup:
             lat, lon = parsed
             closest = self._closest_stations_for_coords(lat, lon)
 
+        if self.interpolate:
+            values, station = self._interpolate(closest, requested, target_date)
+            return assemble_result(
+                target_date=target_date,
+                metric_values=values,
+                station=station,
+                units=self.units,
+                requested=requested,
+                zipcode=zipcode,
+                latitude=lat,
+                longitude=lon,
+            )
+
         values: dict[str, float] = {}
         flags: dict[str, str] = {}
         station = StationMeta()
@@ -199,6 +216,61 @@ class WeatherLookup:
             # Re-key flags from GHCN codes to result field names
             result.flags = {ELEMENTS[e].field: f for e, f in flags.items()}
         return result
+
+    def _interpolate(
+        self,
+        closest: list[tuple[str, int]],
+        requested: list[str],
+        target_date: date,
+    ) -> tuple[dict[str, float], StationMeta]:
+        """Inverse-distance-weight each element across nearby stations.
+
+        Args:
+            closest: (station_id, distance) pairs, nearest first.
+            requested: Element codes to estimate.
+            target_date: Date to fetch.
+
+        Returns:
+            (metric values keyed by element, station metadata marking the
+            result as interpolated with the nearest contributor's
+            distance).
+        """
+        samples: dict[str, list[Sample]] = {e: [] for e in requested}
+        nearest_used: int | None = None
+        used = 0
+
+        for station_id, distance in closest:
+            if self.max_distance_meters and distance > self.max_distance_meters:
+                break
+            if used >= self.interpolate_stations:
+                break
+            station_info = self.db.get_station_info(station_id)
+            if not station_info:
+                continue
+            _name, station_type = station_info
+            metric = self._station_values(station_id, station_type, target_date)
+            contributed = False
+            for element, value in metric.items():
+                if element in samples:
+                    samples[element].append(
+                        Sample(distance_meters=float(distance), value=value)
+                    )
+                    contributed = True
+            if contributed:
+                used += 1
+                if nearest_used is None:
+                    nearest_used = distance
+
+        values = {
+            element: estimate
+            for element in requested
+            if (estimate := idw(samples[element], power=self.idw_power)) is not None
+        }
+        station = StationMeta(
+            station_type="interpolated" if values else None,
+            station_distance_meters=nearest_used,
+        )
+        return values, station
 
     def _closest_stations_for_zip(
         self, zipcode: str, lat: float, lon: float

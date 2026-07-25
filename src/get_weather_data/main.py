@@ -56,6 +56,7 @@ class Weather:
     online: bool = False
     units: Units = "metric"
     include_flags: bool = False
+    interpolate: bool = False
     _db: Database | None = field(default=None, repr=False)
     _lookup: WeatherLookup | None = field(default=None, repr=False)
     _online_lookup: OnlineLookup | None = field(default=None, repr=False)
@@ -90,7 +91,10 @@ class Weather:
         """Get the weather lookup instance."""
         if self._lookup is None:
             self._lookup = WeatherLookup(
-                db=self.db, units=self.units, include_flags=self.include_flags
+                db=self.db,
+                units=self.units,
+                include_flags=self.include_flags,
+                interpolate=self.interpolate,
             )
         return self._lookup
 
