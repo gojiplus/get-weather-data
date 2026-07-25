@@ -4,6 +4,8 @@ from datetime import date
 
 import pytest
 
+pytest.importorskip("pandas")
+
 from get_weather_data.core.database import INDEX_VERSION, Database
 from get_weather_data.core.distance import Station
 from get_weather_data.weather import lookup as lookup_module

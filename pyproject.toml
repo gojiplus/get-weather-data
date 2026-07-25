@@ -121,6 +121,7 @@ test = [
     "pytest-cov>=6",
     "pytest-mock>=3.12",
     "respx>=0.21",
+    "pandas>=2.0",  # exercises the optional get_frame path
 ]
 docs = [
     "sphinx>=8",

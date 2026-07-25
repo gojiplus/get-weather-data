@@ -373,6 +373,7 @@ pandas = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "pandas" },
     { name = "pre-commit" },
     { name = "pydoclint" },
     { name = "pyright" },
@@ -391,6 +392,7 @@ docs = [
     { name = "sphinx-copybutton" },
 ]
 test = [
+    { name = "pandas" },
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "pytest-mock" },
@@ -409,6 +411,7 @@ provides-extras = ["fast", "pandas"]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "pandas", specifier = ">=2.0" },
     { name = "pre-commit", specifier = ">=4" },
     { name = "pydoclint", specifier = ">=0.5" },
     { name = "pyright", specifier = ">=1.1.390" },
@@ -426,6 +429,7 @@ docs = [
     { name = "sphinx-copybutton" },
 ]
 test = [
+    { name = "pandas", specifier = ">=2.0" },
     { name = "pytest", specifier = ">=8" },
     { name = "pytest-cov", specifier = ">=6" },
     { name = "pytest-mock", specifier = ">=3.12" },
