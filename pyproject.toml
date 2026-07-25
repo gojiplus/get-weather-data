@@ -79,14 +79,24 @@ ignore = ["D203", "D213"]
 convention = "google"
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S101", "S105", "S106", "D"]
+"tests/**" = ["S101", "S105", "S106", "S108", "RUF012", "D"]
 "examples/**" = ["T20", "S", "D"]  # demo scripts: prints and literal paths are the point
 "docs/**" = ["D"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-v --tb=short"
+# Exclude network/live tests by default (CI's fixed pytest command inherits
+# this); run them locally with `pytest -m live`.
+addopts = "-v --tb=short -m 'not live'"
 pythonpath = ["src"]
+markers = [
+    "live: hits real NOAA endpoints; excluded by default, run with -m live",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning:xarray",
+    "ignore::DeprecationWarning:netCDF4",
+    "ignore::DeprecationWarning:pandas",
+]
 
 [tool.coverage.run]
 source = ["src/get_weather_data"]
