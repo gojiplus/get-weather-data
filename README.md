@@ -241,8 +241,8 @@ hail, glaze, blowing snow, ...) and, for GSOD airport stations, the
 
 ```python
 w = Weather(online=True, include_weather_types=True)
-r = w.get("11430", "2023-07-16")   # JFK on a stormy afternoon
-print(sorted(r.weather_types))     # ['fog', 'heavy_fog', 'thunder']
+r = w.get("11430", "2023-07-16")  # JFK on a stormy afternoon
+print(sorted(r.weather_types))  # ['fog', 'heavy_fog', 'thunder']
 ```
 
 `get-weather get <loc> <date> --weather-types` shows them on the CLI,
