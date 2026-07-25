@@ -36,6 +36,9 @@ dynamic = ["version"]
 fast = [
     "scipy>=1.11",
 ]
+pandas = [
+    "pandas>=2.0",
+]
 
 [project.scripts]
 get-weather = "get_weather_data.cli:main"

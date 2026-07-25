@@ -4,6 +4,7 @@ import logging
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from get_weather_data.core.config import Config, set_config
 from get_weather_data.core.database import INDEX_VERSION, Database
@@ -20,6 +21,9 @@ from get_weather_data.weather.lookup import WeatherLookup
 from get_weather_data.weather.online import OnlineLookup
 from get_weather_data.weather.results import WeatherResult
 from get_weather_data.weather.units import Units
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 logger = logging.getLogger("get_weather_data")
 
@@ -189,6 +193,39 @@ class Weather:
                 location, start_date, end_date, elements
             )
         return self.lookup.get_weather_range(location, start_date, end_date, elements)
+
+    def get_frame(
+        self,
+        location: LocationInput,
+        start_date: str | date,
+        end_date: str | date | None = None,
+        elements: list[str] | None = None,
+    ) -> "pd.DataFrame":
+        """Get weather for a location as a pandas DataFrame.
+
+        One row per day, metadata columns followed by the weather value
+        columns (in the configured units). Requires the ``pandas`` extra
+        (``pip install get-weather-data[pandas]``).
+
+        Args:
+            location: 5-digit US ZIP code, "lat,lon" string, or
+                (lat, lon) tuple.
+            start_date: Start date (YYYY-MM-DD) or date object.
+            end_date: End date; defaults to start_date (single day).
+            elements: List of weather elements to retrieve.
+
+        Returns:
+            A tidy DataFrame of the results.
+
+        Raises:
+            ImportError: If pandas is not installed.
+        """  # noqa: DOC502 - raised by results_to_frame
+        from get_weather_data.weather.frame import results_to_frame
+
+        if end_date is None:
+            end_date = start_date
+        results = self.get_range(location, start_date, end_date, elements)
+        return results_to_frame(results)
 
     def process_csv(
         self,
