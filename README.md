@@ -95,8 +95,15 @@ Notes on online mode:
   the CLI all take either a ZIP code or coordinates
 - **Consistent units**: real metric values (°C, mm, m/s) across the
   API, CLI, and CSV output — or `units="imperial"` (°F, in, mph)
+- **pandas-ready**: `Weather.get_frame(...)` returns a tidy DataFrame
+  (`pip install get-weather-data[pandas]`)
+- **13 variables**: temperatures, precipitation, snow, wind + gust,
+  dew point, pressures, and visibility
+- **Quality-controlled**: values that failed NOAA's QC are dropped by
+  default; `include_flags=True` surfaces the per-field QC flag
 - **Automatic station selection**: nearest station first, farther
-  stations fill in missing variables
+  stations fill in missing variables; `coverage(...)` reports how well
+  a point is served
 - **Two data sources**: GHCN Daily (~93K US/CA/MX stations) and GSOD
   (~9K airport stations)
 - **Robust batch processing**: streams CSVs in chunks, one bad row gets
@@ -125,6 +132,18 @@ for r in results:
         print(f"{r.date}: High {r.tmax:.0f}°C")
 ```
 
+### Get a pandas DataFrame
+
+```python
+from get_weather_data import Weather
+
+weather = Weather()  # needs: pip install get-weather-data[pandas]
+
+df = weather.get_frame("90210", "2024-07-01", "2024-07-07")
+# one row per day; columns = metadata + tmax/tmin/prcp/... in your units
+df[["date", "tmax", "prcp"]].head()
+```
+
 ### Process a CSV File
 
 ```python
@@ -149,6 +168,14 @@ Output rows carry the weather columns below (already in your chosen
 units), plus `weather_error` explaining any row that could not be
 resolved. More examples in the [examples/](examples/) directory.
 
+### Check coverage before trusting the numbers
+
+```python
+cov = weather.coverage("59718", "2024-01-01", "2024-12-31")
+print(cov.station_name, cov.station_distance_meters, "m away")
+print(f"tmax present on {cov.fraction('tmax'):.0%} of days")
+```
+
 ## Weather Variables
 
 All values are floats in the units below (or their imperial
@@ -165,6 +192,14 @@ a genuine zero is reported as `0.0`.
 | `snow` | Snowfall (GHCN stations only) | mm | in |
 | `snwd` | Snow depth | mm | in |
 | `awnd` | Average wind speed | m/s | mph |
+| `wind_gust` | Peak wind gust | m/s | mph |
+| `dewpoint` | Average dew point | °C | °F |
+| `sea_level_pressure` | Sea-level pressure | hPa | inHg |
+| `station_pressure` | Station pressure | hPa | inHg |
+| `visibility` | Visibility (GSOD stations only) | km | mi |
+
+With `include_flags=True`, `result.flags` maps each field to its GHCN
+quality-control flag (blank = passed all checks; GHCN stations only).
 
 ## Data Sources
 

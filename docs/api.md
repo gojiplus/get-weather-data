@@ -20,6 +20,15 @@ unit system named by ``units`` (metric: °C/mm/m/s; imperial:
 .. autoclass:: get_weather_data.WeatherResult
 ```
 
+## Coverage
+
+Availability report from ``Weather.coverage(...)``.
+
+```{eval-rst}
+.. autoclass:: get_weather_data.Coverage
+   :members:
+```
+
 ## OnlineLookup
 
 Database-free lookup backed by the NOAA CDO Web Services v2 API

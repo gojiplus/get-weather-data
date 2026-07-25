@@ -61,6 +61,15 @@ print(f"Min temp: {result.tmin} °C")
 A field is `None` when no nearby station reported it; a genuine zero
 (0 °C, 0 mm) is `0.0`.
 
+## As a pandas DataFrame
+
+Install the extra (`pip install get-weather-data[pandas]`) and call
+`get_frame` for a tidy, one-row-per-day DataFrame in your chosen units:
+
+```python
+df = weather.get_frame("90210", "2024-07-01", "2024-07-07")
+```
+
 ## Get Weather for a Date Range
 
 ```python
@@ -118,3 +127,8 @@ never aborts the job, and output is written incrementally.
 | `snow` | Snowfall (GHCN stations only) | mm | in |
 | `snwd` | Snow depth | mm | in |
 | `awnd` | Average wind speed | m/s | mph |
+| `wind_gust` | Peak wind gust | m/s | mph |
+| `dewpoint` | Average dew point | °C | °F |
+| `sea_level_pressure` | Sea-level pressure | hPa | inHg |
+| `station_pressure` | Station pressure | hPa | inHg |
+| `visibility` | Visibility (GSOD stations only) | km | mi |
