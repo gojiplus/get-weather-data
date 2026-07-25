@@ -51,7 +51,10 @@ class OnlineLookup:
 
     client: NOAAClient = field(default_factory=NOAAClient)
     units: Units = "metric"
-    max_stations: int = 10
+    # Dense CoCoRaHS networks (precip/snow-only community observers) can
+    # fill the nearest ranks in a metro, crowding out the airport station
+    # that carries temperature; keep the search wide enough to reach it.
+    max_stations: int = 20
     zip_coordinates_loader: Callable[[], dict[str, tuple[float, float]]] | None = None
     _zip_coords: dict[str, tuple[float, float]] | None = field(default=None, repr=False)
     _station_lists: dict[tuple[float, float, int, int], _StationList] = field(
