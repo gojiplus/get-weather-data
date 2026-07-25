@@ -16,6 +16,7 @@ from get_weather_data.stations import (
     import_zipcodes,
 )
 from get_weather_data.weather.batch import process_csv as _process_csv
+from get_weather_data.weather.gridded import GriddedLookup
 from get_weather_data.weather.location import LocationInput
 from get_weather_data.weather.lookup import WeatherLookup
 from get_weather_data.weather.online import OnlineLookup
@@ -24,12 +25,17 @@ from get_weather_data.weather.results import (
     WeatherResult,
     summarize_coverage,
 )
-from get_weather_data.weather.units import Units
+from get_weather_data.weather.units import ELEMENTS, Source, Units
 
 if TYPE_CHECKING:
     import pandas as pd
 
 logger = logging.getLogger("get_weather_data")
+
+
+def _has_data(result: WeatherResult) -> bool:
+    """Whether a result carries any weather value."""
+    return any(getattr(result, spec.field) is not None for spec in ELEMENTS.values())
 
 
 @dataclass
@@ -57,9 +63,11 @@ class Weather:
     units: Units = "metric"
     include_flags: bool = False
     interpolate: bool = False
+    source: Source = "station"
     _db: Database | None = field(default=None, repr=False)
     _lookup: WeatherLookup | None = field(default=None, repr=False)
     _online_lookup: OnlineLookup | None = field(default=None, repr=False)
+    _grid: GriddedLookup | None = field(default=None, repr=False)
 
     def __post_init__(self) -> None:
         """Configure logging and build the selected lookup backend.
@@ -97,6 +105,13 @@ class Weather:
                 interpolate=self.interpolate,
             )
         return self._lookup
+
+    @property
+    def grid(self) -> GriddedLookup:
+        """Get the nClimGrid gridded-lookup instance."""
+        if self._grid is None:
+            self._grid = GriddedLookup(units=self.units)
+        return self._grid
 
     def setup(
         self,
@@ -173,7 +188,15 @@ class Weather:
 
         if self._online_lookup is not None:
             return self._online_lookup.get_weather(location, target_date, elements)
-        return self.lookup.get_weather(location, target_date, elements)
+        if self.source == "grid":
+            return self.grid.get_weather(location, target_date, elements)
+
+        result = self.lookup.get_weather(location, target_date, elements)
+        if self.source == "auto" and not _has_data(result):
+            grid_result = self.grid.get_weather(location, target_date, elements)
+            if _has_data(grid_result):
+                return grid_result
+        return result
 
     def get_range(
         self,
@@ -203,7 +226,22 @@ class Weather:
             return self._online_lookup.get_weather_range(
                 location, start_date, end_date, elements
             )
-        return self.lookup.get_weather_range(location, start_date, end_date, elements)
+        if self.source == "grid":
+            return self.grid.get_weather_range(location, start_date, end_date, elements)
+
+        results = self.lookup.get_weather_range(
+            location, start_date, end_date, elements
+        )
+        if self.source == "auto" and any(not _has_data(r) for r in results):
+            # Fill the days the station network couldn't cover from the grid
+            grid_results = self.grid.get_weather_range(
+                location, start_date, end_date, elements
+            )
+            results = [
+                g if (not _has_data(s) and _has_data(g)) else s
+                for s, g in zip(results, grid_results, strict=True)
+            ]
+        return results
 
     def get_frame(
         self,

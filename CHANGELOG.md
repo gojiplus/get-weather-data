@@ -2,6 +2,18 @@
 
 Notable changes to get-weather-data. Versions follow the git tags.
 
+## 5.0.0
+
+Added
+
+- Gridded backend: `Weather(source="grid")` serves NOAA nClimGrid-Daily,
+  an authoritative 5-km daily grid, so any contiguous-US lat/long
+  returns real temperature and precipitation with no station gaps and
+  no local database. Sliced a cell at a time over OPeNDAP
+  (`pip install get-weather-data[grid]`).
+- `source="auto"` prefers raw station observations and fills days the
+  station network cannot cover from the grid.
+
 ## 4.2.0
 
 Added

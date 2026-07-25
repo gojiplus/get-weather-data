@@ -89,6 +89,12 @@ def setup(
     help="Comma-separated element codes to fetch (e.g. TMAX,PRCP)",
 )
 @click.option(
+    "--source",
+    type=click.Choice(["station", "grid", "auto"]),
+    default="station",
+    help="station observations, nClimGrid grid, or auto (grid fills gaps)",
+)
+@click.option(
     "--online",
     is_flag=True,
     help="Query the NOAA CDO API directly (no local database; requires NCDC_TOKEN)",
@@ -100,6 +106,7 @@ def get(
     target_date: str,
     units: str,
     elements: str | None,
+    source: str,
     online: bool,
 ) -> None:
     """Get weather data for a location and date.
@@ -115,6 +122,7 @@ def get(
             verbose=ctx.obj["verbose"],
             online=online,
             units=units,  # type: ignore[arg-type]
+            source=source,  # type: ignore[arg-type]
         )
         element_list = elements.split(",") if elements else None
         result = weather.get(location, target_date, elements=element_list)

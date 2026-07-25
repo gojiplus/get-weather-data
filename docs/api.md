@@ -52,6 +52,17 @@ Low-level CDO v2 API client.
    :undoc-members:
 ```
 
+## GriddedLookup
+
+nClimGrid gridded backend (`Weather(source="grid")`; needs the
+`grid` extra). Any contiguous-US point returns temperature and
+precipitation.
+
+```{eval-rst}
+.. autoclass:: get_weather_data.weather.gridded.GriddedLookup
+   :members:
+```
+
 ## Database
 
 Low-level database operations.

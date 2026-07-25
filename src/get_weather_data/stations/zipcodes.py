@@ -44,6 +44,16 @@ def download_zipcodes(output_dir: Path | None = None, force: bool = False) -> Pa
     return output_file
 
 
+def zip_centroids() -> dict[str, tuple[float, float]]:
+    """Load ZIP-code centroids from the cached GeoNames file.
+
+    Returns:
+        Mapping of 5-digit ZIP code to (lat, lon).
+    """
+    path = download_zipcodes()
+    return {z["zipcode"]: (z["lat"], z["lon"]) for z in parse_zipcodes(path)}
+
+
 def parse_zipcodes(file_path: Path) -> list[dict]:
     """Parse GeoNames US.txt file.
 

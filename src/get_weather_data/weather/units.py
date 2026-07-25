@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 Units = Literal["metric", "imperial"]
+Source = Literal["station", "grid", "auto"]
 
 IN_TO_MM = 25.4
 MS_TO_MPH = 2.2369362920544

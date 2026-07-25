@@ -106,8 +106,12 @@ Notes on online mode:
   a point is served
 - **Interpolation**: `Weather(interpolate=True)` inverse-distance-weights
   the nearest stations instead of taking the single closest one
-- **Two data sources**: GHCN Daily (~93K US/CA/MX stations) and GSOD
-  (~9K airport stations)
+- **Universal CONUS coverage**: `source="grid"` (or `"auto"`) pulls
+  NOAA's authoritative 5-km nClimGrid daily grid, so *any* Lower-48
+  lat/long returns real temperature + precipitation — no station gaps
+  (`pip install get-weather-data[grid]`)
+- **Three data sources**: GHCN Daily (~93K US/CA/MX stations), GSOD
+  (~9K airport stations), and the nClimGrid gridded product
 - **Robust batch processing**: streams CSVs in chunks, one bad row gets
   a `weather_error` note instead of killing the job
 - **Cache management**: TTL-based refresh of station lists,
@@ -215,6 +219,30 @@ a genuine zero is reported as `0.0`.
 With `include_flags=True`, `result.flags` maps each field to its GHCN
 quality-control flag (blank = passed all checks; GHCN stations only).
 
+## Which backend?
+
+| `source=` | Data | Coverage | Needs | Notes |
+|-----------|------|----------|-------|-------|
+| `"station"` (default) | Raw GHCN/GSOD station observations | Wherever a station is near | `setup()` (local DB) | All 13 variables |
+| `"grid"` | nClimGrid 5-km daily grid | **Any point in the Lower 48** | `[grid]` extra | Temp + precip only; CONUS only |
+| `"auto"` | Station where available, grid to fill gaps | Best of both in CONUS | both | Prefers real observations |
+
+```python
+from get_weather_data import Weather  # pip install get-weather-data[grid]
+
+# Any Lower-48 coordinate, guaranteed — no local database needed
+weather = Weather(source="grid")
+result = weather.get((44.06, -121.31), "2024-01-15")  # remote Oregon
+print(result.tmax, result.station_type)  # -> value, "gridded"
+```
+
+nClimGrid caveats: contiguous US only (no Alaska/Hawaii/PR), maximum,
+minimum, and average temperature plus precipitation only, and a ~2-3
+day latency for the most recent days. Its daily values follow NOAA's
+"24-hour period ending in the early morning of the specified day"
+convention, which can differ slightly from a single station's
+calendar-day value.
+
 ## Data Sources
 
 This package uses data from NOAA's National Centers for Environmental
@@ -225,6 +253,9 @@ Information:
   border ZIPs get the truly nearest station)
 - **GSOD**: Global Summary of the Day from USAF/WBAN airport stations
   (~9K); GSOD reports no snowfall, so `snow` comes from GHCN stations
+- **nClimGrid-Daily**: NOAA's authoritative 5-km gridded daily
+  temperature and precipitation for the contiguous US, 1951-present,
+  interpolated from GHCN-Daily (used by `source="grid"`/`"auto"`)
 - **GeoNames**: ZIP code to coordinates mapping
 
 ## Database Setup and Disk Use

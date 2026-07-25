@@ -39,6 +39,10 @@ fast = [
 pandas = [
     "pandas>=2.0",
 ]
+grid = [
+    "xarray>=2024.0",
+    "netCDF4>=1.6",
+]
 
 [project.scripts]
 get-weather = "get_weather_data.cli:main"
@@ -122,6 +126,8 @@ test = [
     "pytest-mock>=3.12",
     "respx>=0.21",
     "pandas>=2.0",  # exercises the optional get_frame path
+    "xarray>=2024.0",  # exercises the optional gridded backend
+    "netCDF4>=1.6",
 ]
 docs = [
     "sphinx>=8",
