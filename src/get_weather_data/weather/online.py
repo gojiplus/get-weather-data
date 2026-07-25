@@ -25,6 +25,7 @@ from get_weather_data.weather.results import (
     assemble_result,
 )
 from get_weather_data.weather.units import (
+    ELEMENTS,
     Units,
     ghcn_raw_to_metric,
     normalize_elements,
@@ -53,6 +54,7 @@ class OnlineLookup:
     client: NOAAClient = field(default_factory=NOAAClient)
     units: Units = "metric"
     include_weather_types: bool = False
+    explain: bool = False
     # Dense CoCoRaHS networks (precip/snow-only community observers) can
     # fill the nearest ranks in a metro, crowding out the airport station
     # that carries temperature; keep the search wide enough to reach it.
@@ -118,23 +120,35 @@ class OnlineLookup:
         else:
             coords = parsed
 
-        def _empty(day_offset: int) -> WeatherResult:
-            return WeatherResult(
+        def _empty(day_offset: int, reason: str) -> WeatherResult:
+            result = WeatherResult(
                 date=start_date + timedelta(days=day_offset),
                 zipcode=zipcode,
                 latitude=coords[0] if coords else None,
                 longitude=coords[1] if coords else None,
                 units=self.units,
             )
+            if self.explain:
+                result.stations_considered = 0
+                result.missing = {ELEMENTS[e].field: reason for e in requested}
+            return result
 
         n_days = (end_date - start_date).days + 1
         if coords is None:
-            return [_empty(i) for i in range(n_days)]
+            reason = (
+                f"ZIP code {zipcode} could not be resolved to coordinates"
+                if zipcode
+                else "the location could not be resolved to coordinates"
+            )
+            return [_empty(i, reason) for i in range(n_days)]
 
         lat, lon = coords
         stations = self._closest_stations(lat, lon, start_date, end_date)
         if not stations:
-            return [_empty(i) for i in range(n_days)]
+            return [
+                _empty(i, "no CDO stations were found near this location")
+                for i in range(n_days)
+            ]
 
         station_ids = [info.id for info, _ in stations]
         records: list[dict[str, Any]] = []
@@ -273,7 +287,46 @@ class OnlineLookup:
         )
         if self.include_weather_types:
             result.weather_types = weather_types
+        if self.explain:
+            result.stations_considered = len(stations)
+            result.missing = self._missing_reasons(
+                requested, values, target_date, len(stations)
+            )
         return result
+
+    def _missing_reasons(
+        self,
+        requested: list[str],
+        values: dict[str, float],
+        target_date: date,
+        n_stations: int,
+    ) -> dict[str, str]:
+        """Explain, per requested field, why the CDO query returned none.
+
+        Args:
+            requested: Element codes that were asked for.
+            values: Element codes resolved to a value.
+            target_date: The queried date (named in each reason).
+            n_stations: CDO stations searched near the point.
+
+        Returns:
+            Field name -> reason for each requested element with no
+            value; empty when everything requested was found.
+        """
+        missing = [e for e in requested if e not in values]
+        if not missing:
+            return {}
+        date_str = target_date.strftime("%Y-%m-%d")
+        if n_stations == 0:
+            summary = "no CDO stations were found near this location"
+            return dict.fromkeys((ELEMENTS[e].field for e in missing), summary)
+        return {
+            ELEMENTS[e].field: (
+                f"none of the {n_stations} CDO stations near this point "
+                f"reported {ELEMENTS[e].field} on {date_str}"
+            )
+            for e in missing
+        }
 
 
 def _record_date(record: dict[str, Any]) -> date | None:

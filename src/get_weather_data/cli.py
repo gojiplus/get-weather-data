@@ -104,6 +104,11 @@ def setup(
     is_flag=True,
     help="Also report present-weather phenomena (fog, thunder, hail, ...)",
 )
+@click.option(
+    "--explain",
+    is_flag=True,
+    help="Explain why any requested value is missing (station coverage)",
+)
 @click.pass_context
 def get(
     ctx: click.Context,
@@ -114,6 +119,7 @@ def get(
     source: str,
     online: bool,
     weather_types: bool,
+    explain: bool,
 ) -> None:
     """Get weather data for a location and date.
 
@@ -130,6 +136,7 @@ def get(
             units=units,  # type: ignore[arg-type]
             source=source,  # type: ignore[arg-type]
             include_weather_types=weather_types,
+            explain=explain,
         )
         element_list = elements.split(",") if elements else None
         result = weather.get(location, target_date, elements=element_list)
@@ -169,6 +176,16 @@ def get(
 
     console.print(table)
 
+    if explain:
+        considered = result.stations_considered
+        console.print(f"\nStations examined: {considered if considered else 0}")
+        if result.missing:
+            console.print("[yellow]Missing values:[/yellow]")
+            for field_name, reason in result.missing.items():
+                console.print(f"  • {field_name}: {reason}")
+        else:
+            console.print("[green]All requested values were found.[/green]")
+
 
 @cli.command()
 @click.argument("input_file", type=click.Path(exists=True))
@@ -191,6 +208,11 @@ def get(
     is_flag=True,
     help="Add a weather_types column with present-weather phenomena",
 )
+@click.option(
+    "--explain",
+    is_flag=True,
+    help="Add stations_considered and missing columns explaining gaps",
+)
 @click.option("--parallel/--no-parallel", default=True, help="Use parallel processing")
 @click.option("--workers", type=int, help="Number of worker threads (default: auto)")
 @click.pass_context
@@ -207,6 +229,7 @@ def process(
     month_column: str,
     day_column: str,
     weather_types: bool,
+    explain: bool,
     parallel: bool,
     workers: int | None,
 ) -> None:
@@ -223,6 +246,7 @@ def process(
         verbose=ctx.obj["verbose"],
         units=units,  # type: ignore[arg-type]
         include_weather_types=weather_types,
+        explain=explain,
     )
 
     mode = "parallel" if parallel else "sequential"

@@ -45,6 +45,11 @@ class WeatherResult:
             (GHCN stations only).
         weather_types: Present-weather phenomena for the day (e.g.
             {"fog", "thunder"}), when include_weather_types is set.
+        stations_considered: How many stations were examined to build
+            this result, when explain is set.
+        missing: Per-field reason a requested value is absent (e.g.
+            {"tmax": "none of the 20 nearest stations ..."}), when
+            explain is set; empty when every requested field was found.
     """
 
     date: date_type
@@ -71,6 +76,8 @@ class WeatherResult:
     visibility: float | None = None
     flags: dict[str, str] | None = None
     weather_types: set[str] | None = None
+    stations_considered: int | None = None
+    missing: dict[str, str] | None = None
 
 
 @dataclass

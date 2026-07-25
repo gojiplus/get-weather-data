@@ -117,3 +117,16 @@ def test_weather_types_off_by_default():
     """Without the flag, weather_types stays None."""
     r = _online().get("11430", date(2023, 7, 16))
     assert r.weather_types is None
+
+
+@online_only
+def test_explain_reports_provenance():
+    """explain=True attaches a station count and per-field reasons."""
+    w = Weather(online=True, explain=True)
+    r = w.get("10001", date(2023, 7, 15))
+    assert r.stations_considered is not None
+    assert r.stations_considered > 0
+    assert r.missing is not None  # a dict (possibly empty when all found)
+    # Any missing field must carry a non-empty reason string.
+    for reason in r.missing.values():
+        assert reason
