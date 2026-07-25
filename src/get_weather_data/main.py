@@ -51,6 +51,7 @@ class Weather:
     verbose: bool = False
     online: bool = False
     units: Units = "metric"
+    include_flags: bool = False
     _db: Database | None = field(default=None, repr=False)
     _lookup: WeatherLookup | None = field(default=None, repr=False)
     _online_lookup: OnlineLookup | None = field(default=None, repr=False)
@@ -84,7 +85,9 @@ class Weather:
     def lookup(self) -> WeatherLookup:
         """Get the weather lookup instance."""
         if self._lookup is None:
-            self._lookup = WeatherLookup(db=self.db, units=self.units)
+            self._lookup = WeatherLookup(
+                db=self.db, units=self.units, include_flags=self.include_flags
+            )
         return self._lookup
 
     def setup(

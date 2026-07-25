@@ -153,6 +153,49 @@ class TestUnitsOption:
         assert result.snow == pytest.approx(1.0)
 
 
+class TestExtendedVariables:
+    """Dewpoint, pressures, gust, and visibility flow through."""
+
+    def test_ghcn_pressure_and_dewpoint(self, city_db, monkeypatch):
+        # ADPT/ASLP raw are tenths -> metric °C / hPa
+        _mock_ghcn(monkeypatch, {"ADPT": -50.0, "ASLP": 10230.0, "WSFG": 90.0})
+        result = _lookup(city_db, use_gsod=False).get_weather("10001", DAY)
+        assert result.dewpoint == pytest.approx(-5.0)
+        assert result.sea_level_pressure == pytest.approx(1023.0)
+        assert result.wind_gust == pytest.approx(9.0)
+
+    def test_gsod_visibility_and_pressure(self, city_db, monkeypatch):
+        # GSOD visibility is miles -> km; SLP is already hPa
+        _mock_gsod(
+            monkeypatch,
+            {"visibility": 10.0, "sea_level_pressure": 1015.0, "dewpoint": 3.0},
+        )
+        result = _lookup(city_db, use_ghcn=False).get_weather("10001", DAY)
+        assert result.visibility == pytest.approx(16.09344)
+        assert result.sea_level_pressure == pytest.approx(1015.0)
+        assert result.dewpoint == pytest.approx(3.0)
+
+
+class TestFlags:
+    """include_flags exposes GHCN QC flags per field."""
+
+    def test_flags_populated(self, city_db, monkeypatch):
+        _mock_ghcn(monkeypatch, {"TMAX": -16.0, "TMIN": -40.0})
+        monkeypatch.setattr(
+            lookup_module,
+            "get_ghcn_flags",
+            lambda station_id, target_date: {"TMAX": "", "TMIN": "G"},
+        )
+        lookup = _lookup(city_db, use_gsod=False, include_flags=True)
+        result = lookup.get_weather("10001", DAY)
+        assert result.flags == {"tmax": "", "tmin": "G"}
+
+    def test_flags_absent_by_default(self, city_db, monkeypatch):
+        _mock_ghcn(monkeypatch, {"TMAX": -16.0})
+        result = _lookup(city_db, use_gsod=False).get_weather("10001", DAY)
+        assert result.flags is None
+
+
 class TestLocationInput:
     """Coordinates and ZIPs resolve through the same lookup."""
 

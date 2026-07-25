@@ -34,6 +34,26 @@ class TestRawToMetric:
         assert ghcn_raw_to_metric("PRCP", 0) == 0.0
 
 
+class TestExtendedElements:
+    """New variables carry correct raw scales and unit labels."""
+
+    def test_pressure_raw_and_imperial(self):
+        # ASLP raw is tenths of hPa
+        assert ghcn_raw_to_metric("ASLP", 10230) == 1023.0
+        assert convert("ASLP", 1013.25, "imperial") == pytest.approx(29.92, abs=0.01)
+        assert unit_label("ASLP", "metric") == "hPa"
+        assert unit_label("ASLP", "imperial") == "inHg"
+
+    def test_gust_and_dewpoint(self):
+        assert ghcn_raw_to_metric("WSFG", 90) == 9.0
+        assert ghcn_raw_to_metric("ADPT", -50) == -5.0
+
+    def test_visibility_labels(self):
+        assert unit_label("VIS", "metric") == "km"
+        assert unit_label("VIS", "imperial") == "mi"
+        assert convert("VIS", 16.09344, "imperial") == pytest.approx(10.0, abs=0.001)
+
+
 class TestImperial:
     """Metric -> imperial conversions."""
 

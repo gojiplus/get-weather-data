@@ -7,7 +7,7 @@ from functools import lru_cache
 
 from get_weather_data.core.database import INDEX_VERSION, Database
 from get_weather_data.core.distance import find_closest
-from get_weather_data.weather.ghcn import get_ghcn_data
+from get_weather_data.weather.ghcn import get_ghcn_data, get_ghcn_flags
 from get_weather_data.weather.gsod import get_gsod_data
 from get_weather_data.weather.location import LocationInput, parse_location
 from get_weather_data.weather.results import (
@@ -16,7 +16,9 @@ from get_weather_data.weather.results import (
     assemble_result,
 )
 from get_weather_data.weather.units import (
+    ELEMENTS,
     IN_TO_MM,
+    MI_TO_KM,
     Units,
     ghcn_raw_to_metric,
     normalize_elements,
@@ -35,6 +37,11 @@ _GSOD_TO_METRIC = {
     "precipitation": ("PRCP", IN_TO_MM),
     "snow_depth": ("SNWD", IN_TO_MM),
     "wind_speed": ("AWND", 1.0),
+    "gust": ("WSFG", 1.0),
+    "dewpoint": ("ADPT", 1.0),
+    "sea_level_pressure": ("ASLP", 1.0),
+    "station_pressure": ("ASTP", 1.0),
+    "visibility": ("VIS", MI_TO_KM),
 }
 
 
@@ -87,6 +94,7 @@ class WeatherLookup:
     use_ghcn: bool = True
     use_gsod: bool = True
     use_cache: bool = True
+    include_flags: bool = False
 
     def __post_init__(self) -> None:
         """Preload caches and check the index version."""
@@ -142,6 +150,7 @@ class WeatherLookup:
             closest = self._closest_stations_for_coords(lat, lon)
 
         values: dict[str, float] = {}
+        flags: dict[str, str] = {}
         station = StationMeta()
 
         for station_id, distance in closest[: self.max_stations]:
@@ -165,6 +174,9 @@ class WeatherLookup:
                 continue
 
             values.update(new_elements)
+            if self.include_flags and station_type == "GHCND":
+                station_flags = self._station_flags(station_id, target_date)
+                flags.update({e: station_flags.get(e, "") for e in new_elements})
             if station.station_id is None:
                 station = StationMeta(
                     station_id=station_id,
@@ -173,7 +185,7 @@ class WeatherLookup:
                     station_distance_meters=distance,
                 )
 
-        return assemble_result(
+        result = assemble_result(
             target_date=target_date,
             metric_values=values,
             station=station,
@@ -183,6 +195,10 @@ class WeatherLookup:
             latitude=lat,
             longitude=lon,
         )
+        if self.include_flags and flags:
+            # Re-key flags from GHCN codes to result field names
+            result.flags = {ELEMENTS[e].field: f for e, f in flags.items()}
+        return result
 
     def _closest_stations_for_zip(
         self, zipcode: str, lat: float, lon: float
@@ -237,6 +253,10 @@ class WeatherLookup:
                 raw = get_gsod_data(station_id, target_date)
             return _gsod_metric(raw)
         return {}
+
+    def _station_flags(self, station_id: str, target_date: date) -> dict[str, str]:
+        """GHCN quality-control flags for a station-day (GHCN elements)."""
+        return get_ghcn_flags(station_id, target_date)
 
     def get_weather_range(
         self,

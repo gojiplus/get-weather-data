@@ -19,27 +19,22 @@ from pathlib import Path
 from get_weather_data.core.database import Database
 from get_weather_data.weather.lookup import WeatherLookup
 from get_weather_data.weather.results import WeatherResult
-from get_weather_data.weather.units import Units
+from get_weather_data.weather.units import ELEMENTS, Units
 
 logger = logging.getLogger("get_weather_data")
 
 CHUNK_SIZE = 500
 
-WEATHER_COLUMNS = [
+_STATION_COLUMNS = [
     "station_id",
     "station_name",
     "station_type",
     "station_distance_meters",
-    "tmax",
-    "tmin",
-    "tavg",
-    "tobs",
-    "prcp",
-    "snow",
-    "snwd",
-    "awnd",
-    "weather_error",
 ]
+# Value columns are derived from the element registry so they stay in
+# sync as elements are added.
+_VALUE_COLUMNS = [spec.field for spec in ELEMENTS.values()]
+WEATHER_COLUMNS = [*_STATION_COLUMNS, *_VALUE_COLUMNS, "weather_error"]
 
 
 @dataclass
@@ -212,28 +207,18 @@ def _parse_date(
     return None
 
 
+def _cell(value: object) -> str:
+    """Render a result attribute as a CSV cell (blank for None)."""
+    return "" if value is None else str(value)
+
+
 def _result_to_dict(result: WeatherResult | None, error: str) -> dict[str, str]:
     """Convert a WeatherResult (or an error) to CSV output columns."""
     if result is None:
         empty = dict.fromkeys(WEATHER_COLUMNS, "")
         empty["weather_error"] = error
         return empty
-    return {
-        "station_id": result.station_id or "",
-        "station_name": result.station_name or "",
-        "station_type": result.station_type or "",
-        "station_distance_meters": (
-            str(result.station_distance_meters)
-            if result.station_distance_meters is not None
-            else ""
-        ),
-        "tmax": str(result.tmax) if result.tmax is not None else "",
-        "tmin": str(result.tmin) if result.tmin is not None else "",
-        "tavg": str(result.tavg) if result.tavg is not None else "",
-        "tobs": str(result.tobs) if result.tobs is not None else "",
-        "prcp": str(result.prcp) if result.prcp is not None else "",
-        "snow": str(result.snow) if result.snow is not None else "",
-        "snwd": str(result.snwd) if result.snwd is not None else "",
-        "awnd": str(result.awnd) if result.awnd is not None else "",
-        "weather_error": error,
-    }
+    row = {column: _cell(getattr(result, column)) for column in _STATION_COLUMNS}
+    row.update({field: _cell(getattr(result, field)) for field in _VALUE_COLUMNS})
+    row["weather_error"] = error
+    return row

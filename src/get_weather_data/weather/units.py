@@ -15,6 +15,9 @@ Units = Literal["metric", "imperial"]
 IN_TO_MM = 25.4
 MS_TO_MPH = 2.2369362920544
 KNOTS_TO_MS = 0.514444
+HPA_TO_INHG = 0.02952998
+KM_TO_MI = 0.62137119
+MI_TO_KM = 1.609344
 
 
 def _c_to_f(celsius: float) -> float:
@@ -32,6 +35,14 @@ def _mm_to_in(mm: float) -> float:
 
 def _ms_to_mph(ms: float) -> float:
     return ms * MS_TO_MPH
+
+
+def _hpa_to_inhg(hpa: float) -> float:
+    return hpa * HPA_TO_INHG
+
+
+def _km_to_mi(km: float) -> float:
+    return km * KM_TO_MI
 
 
 @dataclass(frozen=True)
@@ -59,6 +70,16 @@ ELEMENTS: dict[str, ElementSpec] = {
     "AWND": ElementSpec(
         "awnd", "Average daily wind speed", 10, "m/s", "mph", _ms_to_mph
     ),
+    "WSFG": ElementSpec("wind_gust", "Peak wind gust", 10, "m/s", "mph", _ms_to_mph),
+    "ADPT": ElementSpec("dewpoint", "Average dew point", 10, "°C", "°F", _c_to_f),
+    "ASLP": ElementSpec(
+        "sea_level_pressure", "Sea-level pressure", 10, "hPa", "inHg", _hpa_to_inhg
+    ),
+    "ASTP": ElementSpec(
+        "station_pressure", "Station pressure", 10, "hPa", "inHg", _hpa_to_inhg
+    ),
+    # No GHCN daily code for visibility; GSOD supplies it (miles -> km).
+    "VIS": ElementSpec("visibility", "Visibility", 1, "km", "mi", _km_to_mi),
 }
 
 

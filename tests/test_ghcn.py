@@ -109,6 +109,58 @@ class TestConcurrentBuild:
         assert route.call_count == 1
 
 
+class TestQualityFlags:
+    """QC-failed values are dropped by default; flags are readable."""
+
+    @respx.mock
+    def test_flagged_value_dropped_by_default(self):
+        respx.get(ghcn.GHCN_BY_YEAR_URL.format(year=2013)).mock(
+            return_value=Response(
+                200,
+                content=_year_gz_bytes(
+                    [
+                        ("USW1", "20130115", "TMAX", "-10", "", "", "W", ""),
+                        # non-blank q_flag "G" = failed a gap check
+                        ("USW1", "20130115", "TMIN", "-40", "", "G", "W", ""),
+                    ]
+                ),
+            )
+        )
+        values = ghcn.get_ghcn_data("USW1", date(2013, 1, 15))
+        assert values["TMAX"] == -10.0
+        assert values["TMIN"] is None  # dropped: failed QC
+
+    @respx.mock
+    def test_keep_flagged_when_disabled(self):
+        respx.get(ghcn.GHCN_BY_YEAR_URL.format(year=2014)).mock(
+            return_value=Response(
+                200,
+                content=_year_gz_bytes(
+                    [("USW1", "20140115", "TMIN", "-40", "", "G", "W", "")]
+                ),
+            )
+        )
+        values = ghcn.get_ghcn_data("USW1", date(2014, 1, 15), drop_flagged=False)
+        assert values["TMIN"] == -40.0
+
+    @respx.mock
+    def test_flags_readable(self):
+        respx.get(ghcn.GHCN_BY_YEAR_URL.format(year=2015)).mock(
+            return_value=Response(
+                200,
+                content=_year_gz_bytes(
+                    [
+                        ("USW1", "20150115", "TMAX", "-10", "", "", "W", ""),
+                        ("USW1", "20150115", "TMIN", "-40", "", "G", "W", ""),
+                    ]
+                ),
+            )
+        )
+        flags = ghcn.get_ghcn_flags("USW1", date(2015, 1, 15))
+        assert flags["TMAX"] == ""
+        assert flags["TMIN"] == "G"
+
+
 class TestReadOnlyPool:
     """Connections are pooled per thread and opened read-only."""
 

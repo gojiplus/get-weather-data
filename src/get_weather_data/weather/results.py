@@ -33,6 +33,14 @@ class WeatherResult:
         snow: Snowfall (GHCN stations only; GSOD has no snowfall element).
         snwd: Snow depth.
         awnd: Average wind speed.
+        wind_gust: Peak wind gust.
+        dewpoint: Average dew point temperature.
+        sea_level_pressure: Sea-level pressure (hPa / inHg).
+        station_pressure: Station-level pressure (hPa / inHg).
+        visibility: Visibility (km / mi; GSOD stations only).
+        flags: Per-field GHCN quality-control flag, when include_flags is
+            set; a blank flag means the value passed all QC checks
+            (GHCN stations only).
     """
 
     date: date_type
@@ -52,6 +60,12 @@ class WeatherResult:
     snow: float | None = None
     snwd: float | None = None
     awnd: float | None = None
+    wind_gust: float | None = None
+    dewpoint: float | None = None
+    sea_level_pressure: float | None = None
+    station_pressure: float | None = None
+    visibility: float | None = None
+    flags: dict[str, str] | None = None
 
 
 @dataclass

@@ -26,6 +26,10 @@ GHCN_ELEMENTS = [
     "TMIN",  # Minimum temperature
     "TOBS",  # Temperature at observation time
     "TAVG",  # Average temperature
+    "WSFG",  # Peak gust wind speed
+    "ADPT",  # Average dew point temperature
+    "ASLP",  # Average sea-level pressure
+    "ASTP",  # Average station pressure
 ]
 
 # One lock per year so concurrent batch threads build each yearly
@@ -159,10 +163,43 @@ def _year_connection(year: int, db_path: Path) -> sqlite3.Connection:
     return conn
 
 
+def _read_ghcn_rows(
+    station_id: str, target_date: date, elements: list[str]
+) -> dict[str, tuple[float, str]]:
+    """Read one station-day's GHCN observations with their QC flags.
+
+    Args:
+        station_id: GHCN station ID.
+        target_date: Date to read.
+        elements: Element codes to keep.
+
+    Returns:
+        Mapping of element code to (raw value, quality flag). The quality
+        flag is blank when the value passed all of NOAA's QC checks.
+    """
+    year = target_date.year
+    db_path = _ensure_ghcn_database(year)
+    date_str = target_date.strftime("%Y%m%d")
+    wanted = set(elements)
+
+    conn = _year_connection(year, db_path)
+    c = conn.execute(
+        f"SELECT element, value, q_flag FROM ghcn_{year} "  # noqa: S608 - int year
+        "WHERE id = ? AND date = ?",
+        (station_id, date_str),
+    )
+    rows: dict[str, tuple[float, str]] = {}
+    for element, value, q_flag in c:
+        if element in wanted and value and value != "-9999":
+            rows[element] = (float(value), (q_flag or "").strip())
+    return rows
+
+
 def get_ghcn_data(
     station_id: str,
     target_date: date,
     elements: list[str] | None = None,
+    drop_flagged: bool = True,
 ) -> dict[str, float | None]:
     """Get GHCN data for a station and date.
 
@@ -170,27 +207,40 @@ def get_ghcn_data(
         station_id: GHCN station ID (e.g., "USW00094728").
         target_date: Date to get data for.
         elements: List of elements to retrieve. Uses default set if None.
+        drop_flagged: If True (default), exclude values that failed one
+            of NOAA's quality-control checks (a non-blank QC flag).
 
     Returns:
         Dict mapping element names to raw GHCN values (None if missing).
     """
     if elements is None:
         elements = GHCN_ELEMENTS
-
-    year = target_date.year
-    db_path = _ensure_ghcn_database(year)
-
-    date_str = target_date.strftime("%Y%m%d")
+    rows = _read_ghcn_rows(station_id, target_date, elements)
     values: dict[str, float | None] = dict.fromkeys(elements)
-
-    conn = _year_connection(year, db_path)
-    c = conn.execute(
-        f"SELECT element, value FROM ghcn_{year} "  # noqa: S608 - int year
-        "WHERE id = ? AND date = ?",
-        (station_id, date_str),
-    )
-    for element, value in c:
-        if element in elements and value and value != "-9999":
-            values[element] = float(value)
-
+    for element, (value, q_flag) in rows.items():
+        if drop_flagged and q_flag:
+            continue
+        values[element] = value
     return values
+
+
+def get_ghcn_flags(
+    station_id: str,
+    target_date: date,
+    elements: list[str] | None = None,
+) -> dict[str, str]:
+    """Get GHCN quality-control flags for a station and date.
+
+    Args:
+        station_id: GHCN station ID.
+        target_date: Date to read.
+        elements: Element codes to retrieve. Uses default set if None.
+
+    Returns:
+        Mapping of element code to QC flag for each present value
+        (blank string = passed all checks).
+    """
+    if elements is None:
+        elements = GHCN_ELEMENTS
+    rows = _read_ghcn_rows(station_id, target_date, elements)
+    return {element: q_flag for element, (_value, q_flag) in rows.items()}
