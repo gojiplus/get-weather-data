@@ -1,12 +1,126 @@
 """Tests for CLI commands."""
 
+from datetime import date
+
 import respx
 from click.testing import CliRunner
 from httpx import Response
 
+from get_weather_data import cli as cli_module
 from get_weather_data.api.noaa import CDO_BASE_URL
 from get_weather_data.cli import cli
+from get_weather_data.core import cache as cache_module
+from get_weather_data.core.cache import CacheEntry
 from get_weather_data.core.config import Config, set_config
+from get_weather_data.weather.results import WeatherResult
+
+
+class _FakeWeather:
+    """Stand-in for Weather in CLI tests (no DB/network)."""
+
+    last_kwargs: dict = {}
+
+    def __init__(self, **kwargs):
+        _FakeWeather.last_kwargs = kwargs
+
+    def setup(self, **kwargs):
+        return None
+
+    def info(self):
+        return {
+            "ghcn_stations": 90000,
+            "usaf_stations": 9000,
+            "total_stations": 99000,
+            "zipcodes": 41000,
+        }
+
+    def get(self, location, target_date, elements=None):
+        return WeatherResult(
+            date=date(2024, 1, 15),
+            station_id="USW1",
+            station_name="TEST STATION",
+            station_type="GHCND",
+            station_distance_meters=4000,
+            tmax=1.5,
+            prcp=0.0,
+        )
+
+    def process_csv(self, **kwargs):
+        _FakeWeather.last_kwargs = kwargs
+        return 3
+
+
+class TestCliCommands:
+    def test_setup(self, monkeypatch):
+        monkeypatch.setattr(cli_module, "Weather", _FakeWeather)
+        result = CliRunner().invoke(cli, ["setup"])
+        assert result.exit_code == 0
+        assert "Setup complete" in result.output
+        assert "90,000" in result.output
+
+    def test_get_table(self, monkeypatch):
+        monkeypatch.setattr(cli_module, "Weather", _FakeWeather)
+        result = CliRunner().invoke(
+            cli, ["get", "10001", "2024-01-15", "--units", "imperial"]
+        )
+        assert result.exit_code == 0
+        assert "TEST STATION" in result.output
+        assert "Maximum temperature" in result.output
+        # zero precip renders as a value, not N/A
+        assert "0.0" in result.output
+
+    def test_get_error(self, monkeypatch):
+        class Boom(_FakeWeather):
+            def get(self, *a, **k):
+                raise RuntimeError("kaboom")
+
+        monkeypatch.setattr(cli_module, "Weather", Boom)
+        result = CliRunner().invoke(cli, ["get", "10001", "2024-01-15"])
+        assert result.exit_code == 1
+        assert "Error:" in result.output
+
+    def test_process(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(cli_module, "Weather", _FakeWeather)
+        infile = tmp_path / "in.csv"
+        infile.write_text("zip,date\n10001,2024-01-15\n")
+        result = CliRunner().invoke(
+            cli,
+            [
+                "process",
+                str(infile),
+                str(tmp_path / "out.csv"),
+                "--date-column",
+                "date",
+            ],
+        )
+        assert result.exit_code == 0
+        assert "Processed 3 rows" in result.output
+        # date-column given -> year/month/day nulled
+        assert _FakeWeather.last_kwargs["year_column"] is None
+
+    def test_cache_info(self, monkeypatch):
+        monkeypatch.setattr(
+            cache_module,
+            "cache_info",
+            lambda: [CacheEntry("ghcn", "/tmp/ghcn", 3, 2_000_000)],
+        )
+        result = CliRunner().invoke(cli, ["cache", "info"])
+        assert result.exit_code == 0
+        assert "ghcn" in result.output
+        assert "2.0 MB" in result.output
+
+    def test_cache_clear(self, monkeypatch):
+        called = {}
+
+        def fake_clear(**kwargs):
+            called.update(kwargs)
+            return 5_000_000
+
+        monkeypatch.setattr(cache_module, "clear_cache", fake_clear)
+        result = CliRunner().invoke(cli, ["cache", "clear", "--gsod", "--yes"])
+        assert result.exit_code == 0
+        assert "Freed" in result.output
+        assert called["gsod"] is True
 
 
 class TestCli:

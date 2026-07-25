@@ -19,4 +19,4 @@ jobs:
     uses: gojiplus/py-canon/.github/workflows/reusable-ci.yml@v1
     with:
       wheel-import: get_weather_data
-      coverage-floor: 0
+      coverage-floor: 85

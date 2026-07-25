@@ -2,6 +2,27 @@
 
 Notable changes to get-weather-data. Versions follow the git tags.
 
+## 5.1.0
+
+Added
+
+- Real end-to-end test suite (`pytest -m live`) validating output against
+  known events (Buffalo 2022 blizzard, Phoenix July 2023 heat) and
+  cross-checking the station and gridded backends.
+- `examples/compare_cities.py` — compare several cities' temperatures.
+
+Changed
+
+- Raised the online backend's station search breadth so temperature is
+  reached in dense community-observer (CoCoRaHS) metros.
+- Test coverage raised to ~89% and now enforced in CI (floor 85).
+
+Fixed
+
+- Online mode could return `None` temperatures near cities blanketed by
+  precipitation-only CoCoRaHS stations (e.g. Buffalo): the airport
+  station carrying temperature was crowded out of the station budget.
+
 ## 5.0.0
 
 Added

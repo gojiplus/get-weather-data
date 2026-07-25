@@ -248,6 +248,28 @@ class TestOnlineLookup:
         assert result.tmin == -4.3
 
     @respx.mock
+    def test_temperature_reached_past_dense_precip_cluster(self):
+        # Regression: dense CoCoRaHS metros put >10 precip-only stations
+        # nearer than the airport that carries temperature. The default
+        # station budget must be wide enough to reach it.
+        precip = [
+            self._station_entry(
+                f"GHCND:US1XX{i:04d}", f"COOP {i}", 40.75, -73.99 + i * 0.008
+            )
+            for i in range(12)
+        ]
+        airport = self._station_entry("GHCND:USW00014733", "AIRPORT", 40.75, -73.80)
+        self._mock_stations([*precip, airport])
+        records = [_record("PRCP", 0, station=s["id"]) for s in precip]
+        records.append(_record("TMAX", -99, station="GHCND:USW00014733"))
+        respx.get(DATA_URL).mock(
+            return_value=Response(200, json=_data_payload(records))
+        )
+        result = self._lookup().get_weather("10001", date(2024, 1, 15))
+        assert result.prcp == 0.0  # from a near precip station
+        assert result.tmax == -9.9  # reached the far airport (raw -99 -> C)
+
+    @respx.mock
     def test_missing_elements_filled_from_farther_stations(self):
         near = self._station_entry(STATION, "NY CITY CENTRAL PARK", 40.78, -73.97)
         far = self._station_entry(
