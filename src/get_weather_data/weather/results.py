@@ -1,6 +1,8 @@
 """Weather result type and the single assembly/conversion boundary."""
 
-from dataclasses import dataclass
+from collections import Counter
+from collections.abc import Sequence
+from dataclasses import dataclass, field
 from datetime import date as date_type
 
 from get_weather_data.weather.units import ELEMENTS, Units, convert
@@ -76,6 +78,67 @@ class StationMeta:
     station_name: str | None = None
     station_type: str | None = None
     station_distance_meters: int | None = None
+
+
+@dataclass
+class Coverage:
+    """How well a location is covered over a date range.
+
+    Attributes:
+        total_days: Number of days in the range.
+        station_id: The station credited on the most days.
+        station_name: Its name.
+        station_distance_meters: Its distance from the query point.
+        available: Per-field count of days with a value.
+    """
+
+    total_days: int
+    station_id: str | None = None
+    station_name: str | None = None
+    station_distance_meters: int | None = None
+    available: dict[str, int] = field(default_factory=dict)
+
+    def fraction(self, element_field: str) -> float:
+        """Fraction of days with data for one field (0.0 to 1.0).
+
+        Args:
+            element_field: A weather value field name (e.g. "tmax").
+
+        Returns:
+            Days-present / total-days, or 0.0 for an empty range.
+        """
+        if self.total_days == 0:
+            return 0.0
+        return self.available.get(element_field, 0) / self.total_days
+
+
+def summarize_coverage(results: Sequence["WeatherResult"]) -> Coverage:
+    """Summarize per-element availability across a range of results.
+
+    Args:
+        results: One result per day, e.g. from ``get_range``.
+
+    Returns:
+        A Coverage report crediting the most-frequent station.
+    """
+    fields = [spec.field for spec in ELEMENTS.values()]
+    available = {
+        f: sum(1 for r in results if getattr(r, f) is not None) for f in fields
+    }
+    station_counts: Counter[str] = Counter(
+        r.station_id for r in results if r.station_id is not None
+    )
+    top_id = station_counts.most_common(1)[0][0] if station_counts else None
+    credited = next((r for r in results if r.station_id == top_id), None)
+    return Coverage(
+        total_days=len(results),
+        station_id=top_id,
+        station_name=credited.station_name if credited else None,
+        station_distance_meters=(
+            credited.station_distance_meters if credited else None
+        ),
+        available=available,
+    )
 
 
 def assemble_result(

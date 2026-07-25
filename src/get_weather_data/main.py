@@ -19,7 +19,11 @@ from get_weather_data.weather.batch import process_csv as _process_csv
 from get_weather_data.weather.location import LocationInput
 from get_weather_data.weather.lookup import WeatherLookup
 from get_weather_data.weather.online import OnlineLookup
-from get_weather_data.weather.results import WeatherResult
+from get_weather_data.weather.results import (
+    Coverage,
+    WeatherResult,
+    summarize_coverage,
+)
 from get_weather_data.weather.units import Units
 
 if TYPE_CHECKING:
@@ -229,6 +233,32 @@ class Weather:
             end_date = start_date
         results = self.get_range(location, start_date, end_date, elements)
         return results_to_frame(results)
+
+    def coverage(
+        self,
+        location: LocationInput,
+        start_date: str | date,
+        end_date: str | date,
+        elements: list[str] | None = None,
+    ) -> "Coverage":
+        """Report how well a location is covered over a date range.
+
+        Runs the same lookups as ``get_range`` and summarizes, per
+        element, the fraction of days with data, plus the station
+        credited on the most days and its distance.
+
+        Args:
+            location: 5-digit US ZIP code, "lat,lon" string, or
+                (lat, lon) tuple.
+            start_date: Start date (YYYY-MM-DD) or date object.
+            end_date: End date (YYYY-MM-DD) or date object.
+            elements: List of weather elements to check.
+
+        Returns:
+            A Coverage report.
+        """
+        results = self.get_range(location, start_date, end_date, elements)
+        return summarize_coverage(results)
 
     def process_csv(
         self,
