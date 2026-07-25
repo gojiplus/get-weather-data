@@ -9,6 +9,7 @@ from get_weather_data.core.cache import is_fresh, year_is_immutable
 from get_weather_data.core.config import get_config
 from get_weather_data.core.download import download_with_retry
 from get_weather_data.weather.units import KNOTS_TO_MS, f_to_c
+from get_weather_data.weather.weather_types import parse_frshtt
 
 logger = logging.getLogger("get_weather_data")
 
@@ -105,3 +106,26 @@ def get_gsod_data(
                 break
 
     return values
+
+
+def get_gsod_weather_types(station_id: str, target_date: date) -> set[str]:
+    """Get present-weather phenomena for a GSOD station and date.
+
+    Args:
+        station_id: USAF-WBAN station ID.
+        target_date: Date to read.
+
+    Returns:
+        Set of phenomenon names parsed from the day's FRSHTT indicator.
+    """
+    year = target_date.year
+    file_path = _ensure_gsod_file(station_id, year)
+    if file_path is None:
+        return set()
+
+    date_str = target_date.strftime("%Y-%m-%d")
+    with open(file_path, encoding="utf-8", errors="replace") as f:
+        for row in csv.DictReader(f):
+            if row.get("DATE") == date_str:
+                return parse_frshtt(row.get("FRSHTT", "").strip())
+    return set()

@@ -20,12 +20,17 @@ Basic usage:
     weather.process_csv("input.csv", "output.csv")
 """
 
+import logging
 from importlib.metadata import PackageNotFoundError, version
 
 from get_weather_data.main import Weather
 from get_weather_data.weather.location import LocationInput
 from get_weather_data.weather.results import Coverage, WeatherResult
 from get_weather_data.weather.units import Units
+
+# Library hygiene: attach a NullHandler so importing the package never
+# emits log output unless the host application configures logging itself.
+logging.getLogger("get_weather_data").addHandler(logging.NullHandler())
 
 try:
     __version__ = version("get-weather-data")

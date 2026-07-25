@@ -99,6 +99,11 @@ def setup(
     is_flag=True,
     help="Query the NOAA CDO API directly (no local database; requires NCDC_TOKEN)",
 )
+@click.option(
+    "--weather-types",
+    is_flag=True,
+    help="Also report present-weather phenomena (fog, thunder, hail, ...)",
+)
 @click.pass_context
 def get(
     ctx: click.Context,
@@ -108,6 +113,7 @@ def get(
     elements: str | None,
     source: str,
     online: bool,
+    weather_types: bool,
 ) -> None:
     """Get weather data for a location and date.
 
@@ -123,6 +129,7 @@ def get(
             online=online,
             units=units,  # type: ignore[arg-type]
             source=source,  # type: ignore[arg-type]
+            include_weather_types=weather_types,
         )
         element_list = elements.split(",") if elements else None
         result = weather.get(location, target_date, elements=element_list)
@@ -153,6 +160,13 @@ def get(
             f"{value:.1f} {label}" if value is not None else "N/A",
         )
 
+    if weather_types:
+        phenomena = result.weather_types
+        table.add_row(
+            "Weather Types",
+            ", ".join(sorted(phenomena)) if phenomena else "none",
+        )
+
     console.print(table)
 
 
@@ -172,6 +186,11 @@ def get(
 @click.option("--year-column", default="year", help="Year column name")
 @click.option("--month-column", default="month", help="Month column name")
 @click.option("--day-column", default="day", help="Day column name")
+@click.option(
+    "--weather-types",
+    is_flag=True,
+    help="Add a weather_types column with present-weather phenomena",
+)
 @click.option("--parallel/--no-parallel", default=True, help="Use parallel processing")
 @click.option("--workers", type=int, help="Number of worker threads (default: auto)")
 @click.pass_context
@@ -187,6 +206,7 @@ def process(
     year_column: str,
     month_column: str,
     day_column: str,
+    weather_types: bool,
     parallel: bool,
     workers: int | None,
 ) -> None:
@@ -202,6 +222,7 @@ def process(
         database_path=ctx.obj["database"],
         verbose=ctx.obj["verbose"],
         units=units,  # type: ignore[arg-type]
+        include_weather_types=weather_types,
     )
 
     mode = "parallel" if parallel else "sequential"

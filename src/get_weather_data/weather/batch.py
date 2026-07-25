@@ -20,6 +20,7 @@ from get_weather_data.core.database import Database
 from get_weather_data.weather.lookup import WeatherLookup
 from get_weather_data.weather.results import WeatherResult
 from get_weather_data.weather.units import ELEMENTS, Units
+from get_weather_data.weather.weather_types import format_weather_types
 
 logger = logging.getLogger("get_weather_data")
 
@@ -35,6 +36,13 @@ _STATION_COLUMNS = [
 # sync as elements are added.
 _VALUE_COLUMNS = [spec.field for spec in ELEMENTS.values()]
 WEATHER_COLUMNS = [*_STATION_COLUMNS, *_VALUE_COLUMNS, "weather_error"]
+
+
+def _weather_columns(include_weather_types: bool) -> list[str]:
+    """Output weather columns, optionally including weather_types."""
+    if not include_weather_types:
+        return WEATHER_COLUMNS
+    return [*_STATION_COLUMNS, *_VALUE_COLUMNS, "weather_types", "weather_error"]
 
 
 @dataclass
@@ -59,6 +67,7 @@ def process_csv(
     day_column: str | int | None = "day",
     db: Database | None = None,
     units: Units = "metric",
+    include_weather_types: bool = False,
     parallel: bool = True,
     max_workers: int | None = None,
 ) -> int:
@@ -77,6 +86,8 @@ def process_csv(
         day_column: Column name or index for day.
         db: Database instance. Uses default if None.
         units: Unit system for the output values.
+        include_weather_types: If True, add a ``weather_types`` column
+            with the day's present-weather phenomena (comma-joined).
         parallel: Use parallel processing for faster execution.
         max_workers: Number of worker threads (default: CPU count).
 
@@ -91,7 +102,10 @@ def process_csv(
     if max_workers is None:
         max_workers = min(os.cpu_count() or 4, 8)
 
-    lookup = WeatherLookup(db=db, units=units)
+    lookup = WeatherLookup(
+        db=db, units=units, include_weather_types=include_weather_types
+    )
+    weather_columns = _weather_columns(include_weather_types)
 
     def parse_row(row: dict[str, str]) -> _Row:
         location: str | tuple[float, float] | None = None
@@ -137,7 +151,7 @@ def process_csv(
         open(output_path, "w", encoding="utf-8", newline="") as outfile,
     ):
         reader = csv.DictReader(infile)
-        fieldnames = list(reader.fieldnames or []) + WEATHER_COLUMNS
+        fieldnames = list(reader.fieldnames or []) + weather_columns
         writer = csv.DictWriter(outfile, fieldnames=fieldnames)
         writer.writeheader()
         outfile.flush()
@@ -154,7 +168,9 @@ def process_csv(
                     outputs = [process_row(parsed) for parsed in chunk]
 
                 for row_data, result, error in outputs:
-                    row_data.update(_result_to_dict(result, error))
+                    row_data.update(
+                        _result_to_dict(result, error, include_weather_types)
+                    )
                     writer.writerow(row_data)
                     if error:
                         errors += 1
@@ -212,13 +228,20 @@ def _cell(value: object) -> str:
     return "" if value is None else str(value)
 
 
-def _result_to_dict(result: WeatherResult | None, error: str) -> dict[str, str]:
+def _result_to_dict(
+    result: WeatherResult | None,
+    error: str,
+    include_weather_types: bool = False,
+) -> dict[str, str]:
     """Convert a WeatherResult (or an error) to CSV output columns."""
+    columns = _weather_columns(include_weather_types)
     if result is None:
-        empty = dict.fromkeys(WEATHER_COLUMNS, "")
+        empty = dict.fromkeys(columns, "")
         empty["weather_error"] = error
         return empty
     row = {column: _cell(getattr(result, column)) for column in _STATION_COLUMNS}
     row.update({field: _cell(getattr(result, field)) for field in _VALUE_COLUMNS})
+    if include_weather_types:
+        row["weather_types"] = format_weather_types(result.weather_types)
     row["weather_error"] = error
     return row

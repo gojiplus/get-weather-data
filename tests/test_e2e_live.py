@@ -101,3 +101,19 @@ def test_grid_and_online_agree():
         pytest.skip("no overlapping data")
     gap = min(abs(online.tmax - v) for v in grid.values() if v is not None)
     assert gap < 4.0
+
+
+@online_only
+def test_weather_types_thunderstorm_day():
+    """A NYC-area summer thunderstorm day flags thunder via WT** codes."""
+    w = Weather(online=True, include_weather_types=True)
+    r = w.get("11430", date(2023, 7, 16))  # JFK area
+    assert r.weather_types is not None
+    assert "thunder" in r.weather_types
+
+
+@online_only
+def test_weather_types_off_by_default():
+    """Without the flag, weather_types stays None."""
+    r = _online().get("11430", date(2023, 7, 16))
+    assert r.weather_types is None

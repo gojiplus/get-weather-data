@@ -7,8 +7,12 @@ from functools import lru_cache
 
 from get_weather_data.core.database import INDEX_VERSION, Database
 from get_weather_data.core.distance import find_closest
-from get_weather_data.weather.ghcn import get_ghcn_data, get_ghcn_flags
-from get_weather_data.weather.gsod import get_gsod_data
+from get_weather_data.weather.ghcn import (
+    get_ghcn_data,
+    get_ghcn_flags,
+    get_ghcn_weather_types,
+)
+from get_weather_data.weather.gsod import get_gsod_data, get_gsod_weather_types
 from get_weather_data.weather.interpolate import Sample, idw
 from get_weather_data.weather.location import LocationInput, parse_location
 from get_weather_data.weather.results import (
@@ -96,6 +100,7 @@ class WeatherLookup:
     use_gsod: bool = True
     use_cache: bool = True
     include_flags: bool = False
+    include_weather_types: bool = False
     interpolate: bool = False
     idw_power: float = 2.0
     interpolate_stations: int = 5
@@ -168,6 +173,7 @@ class WeatherLookup:
 
         values: dict[str, float] = {}
         flags: dict[str, str] = {}
+        weather_types: set[str] = set()
         station = StationMeta()
 
         for station_id, distance in closest[: self.max_stations]:
@@ -180,6 +186,11 @@ class WeatherLookup:
             if not station_info:
                 continue
             station_name, station_type = station_info
+
+            if self.include_weather_types:
+                weather_types |= self._station_weather_types(
+                    station_id, station_type, target_date
+                )
 
             metric = self._station_values(station_id, station_type, target_date)
             new_elements = {
@@ -215,6 +226,8 @@ class WeatherLookup:
         if self.include_flags and flags:
             # Re-key flags from GHCN codes to result field names
             result.flags = {ELEMENTS[e].field: f for e, f in flags.items()}
+        if self.include_weather_types:
+            result.weather_types = weather_types
         return result
 
     def _interpolate(
@@ -329,6 +342,16 @@ class WeatherLookup:
     def _station_flags(self, station_id: str, target_date: date) -> dict[str, str]:
         """GHCN quality-control flags for a station-day (GHCN elements)."""
         return get_ghcn_flags(station_id, target_date)
+
+    def _station_weather_types(
+        self, station_id: str, station_type: str, target_date: date
+    ) -> set[str]:
+        """Present-weather phenomena for a station-day (source-dependent)."""
+        if station_type == "GHCND" and self.use_ghcn:
+            return get_ghcn_weather_types(station_id, target_date)
+        if station_type == "USAF-WBAN" and self.use_gsod:
+            return get_gsod_weather_types(station_id, target_date)
+        return set()
 
     def get_weather_range(
         self,

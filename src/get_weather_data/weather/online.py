@@ -29,6 +29,7 @@ from get_weather_data.weather.units import (
     ghcn_raw_to_metric,
     normalize_elements,
 )
+from get_weather_data.weather.weather_types import WT_CODES
 
 logger = logging.getLogger("get_weather_data")
 
@@ -51,6 +52,7 @@ class OnlineLookup:
 
     client: NOAAClient = field(default_factory=NOAAClient)
     units: Units = "metric"
+    include_weather_types: bool = False
     # Dense CoCoRaHS networks (precip/snow-only community observers) can
     # fill the nearest ranks in a metro, crowding out the airport station
     # that carries temperature; keep the search wide enough to reach it.
@@ -229,11 +231,16 @@ class OnlineLookup:
         """Assemble one day's result from CDO records, nearest first."""
         wanted = set(requested)
         by_station: dict[str, dict[str, float]] = defaultdict(dict)
+        weather_types: set[str] = set()
         for record in records:
             datatype = record.get("datatype")
             station = record.get("station")
             value = record.get("value")
-            if not datatype or not station or value is None or datatype not in wanted:
+            if not datatype or not station:
+                continue
+            if self.include_weather_types and datatype in WT_CODES:
+                weather_types.add(WT_CODES[datatype])
+            if value is None or datatype not in wanted:
                 continue
             by_station[station][datatype] = ghcn_raw_to_metric(datatype, float(value))
 
@@ -254,7 +261,7 @@ class OnlineLookup:
             for element, value in station_values.items():
                 values.setdefault(element, value)
 
-        return assemble_result(
+        result = assemble_result(
             target_date=target_date,
             metric_values=values,
             station=meta,
@@ -264,6 +271,9 @@ class OnlineLookup:
             latitude=lat,
             longitude=lon,
         )
+        if self.include_weather_types:
+            result.weather_types = weather_types
+        return result
 
 
 def _record_date(record: dict[str, Any]) -> date | None:

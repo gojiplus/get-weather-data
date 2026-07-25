@@ -2,6 +2,24 @@
 
 Notable changes to get-weather-data. Versions follow the git tags.
 
+## 5.2.0
+
+Added
+
+- Present-weather phenomena: `Weather(include_weather_types=True)`
+  populates `result.weather_types` (a set like `{"fog", "thunder"}`)
+  from GHCN `WT**` occurrence codes and GSOD's `FRSHTT` indicator, on
+  both the station and online backends.
+- `--weather-types` flag on `get-weather get` (shown in the table) and
+  `get-weather process` (adds a comma-joined `weather_types` CSV
+  column); `get_frame(...)` adds the column when the data carries it.
+
+Changed
+
+- Library hygiene: attach a `NullHandler` to the package logger so
+  importing get-weather-data never emits log output unless the host
+  application configures logging.
+
 ## 5.1.0
 
 Added
