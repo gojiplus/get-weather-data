@@ -208,6 +208,28 @@ print(cov.station_name, cov.station_distance_meters, "m away")
 print(f"tmax present on {cov.fraction('tmax'):.0%} of days")
 ```
 
+### Hourly data
+
+For sub-daily detail, `get_hourly(...)` returns one `HourlyResult` per
+hour from NOAA's ISD-Lite (nearest airport/USAF-WBAN station).
+**Timestamps are UTC** and the local station database is required
+(`setup()`); there is no online equivalent.
+
+```python
+weather = Weather(units="imperial")
+
+hours = weather.get_hourly("11371", "2023-07-16")  # LaGuardia, one UTC day
+for h in hours[:3]:
+    print(h.observed_at, h.temp, "F", h.wind_speed, "mph", h.wind_direction, "deg")
+
+# pandas: one row per hour (needs the [pandas] extra)
+df = weather.get_hourly_frame("11371", "2023-07-16", "2023-07-17")
+```
+
+CLI: `get-weather hourly 11371 2023-07-16 [--end 2023-07-17] [--units imperial]`.
+Fields: `temp`, `dewpoint`, `sea_level_pressure`, `wind_direction`
+(degrees), `wind_speed`, `sky_condition`, `precip_1h`, `precip_6h`.
+
 ## Weather Variables
 
 All values are floats in the units below (or their imperial

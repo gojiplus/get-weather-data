@@ -17,11 +17,13 @@ from get_weather_data.stations import (
 )
 from get_weather_data.weather.batch import process_csv as _process_csv
 from get_weather_data.weather.gridded import GriddedLookup
+from get_weather_data.weather.hourly import HourlyLookup
 from get_weather_data.weather.location import LocationInput
 from get_weather_data.weather.lookup import WeatherLookup
 from get_weather_data.weather.online import OnlineLookup
 from get_weather_data.weather.results import (
     Coverage,
+    HourlyResult,
     WeatherResult,
     summarize_coverage,
 )
@@ -70,6 +72,7 @@ class Weather:
     _lookup: WeatherLookup | None = field(default=None, repr=False)
     _online_lookup: OnlineLookup | None = field(default=None, repr=False)
     _grid: GriddedLookup | None = field(default=None, repr=False)
+    _hourly: HourlyLookup | None = field(default=None, repr=False)
 
     def __post_init__(self) -> None:
         """Configure logging and build the selected lookup backend.
@@ -120,6 +123,13 @@ class Weather:
         if self._grid is None:
             self._grid = GriddedLookup(units=self.units)
         return self._grid
+
+    @property
+    def hourly(self) -> HourlyLookup:
+        """Get the ISD-Lite hourly-lookup instance."""
+        if self._hourly is None:
+            self._hourly = HourlyLookup(db=self.db, units=self.units)
+        return self._hourly
 
     def setup(
         self,
@@ -283,6 +293,69 @@ class Weather:
             end_date = start_date
         results = self.get_range(location, start_date, end_date, elements)
         return results_to_frame(results)
+
+    def get_hourly(
+        self,
+        location: LocationInput,
+        start_date: str | date,
+        end_date: str | date | None = None,
+    ) -> list[HourlyResult]:
+        """Get hourly observations for a location (ISD-Lite).
+
+        Resolves the nearest USAF-WBAN station and reads hourly ISD-Lite
+        data. Requires the local database (``setup()``); there is no
+        online equivalent for hourly data.
+
+        Args:
+            location: 5-digit US ZIP code, "lat,lon" string, or
+                (lat, lon) tuple.
+            start_date: First UTC date (YYYY-MM-DD) or date object.
+            end_date: Last UTC date; defaults to start_date (single day).
+
+        Returns:
+            One HourlyResult per available hour, in time order (UTC).
+
+        Raises:
+            ValueError: If this Weather was created with online=True.
+        """
+        if self.online:
+            raise ValueError(
+                "get_hourly requires the local database (run setup()); "
+                "hourly ISD-Lite is not served by the online CDO API."
+            )
+        if isinstance(start_date, str):
+            start_date = date.fromisoformat(start_date)
+        if isinstance(end_date, str):
+            end_date = date.fromisoformat(end_date)
+        return self.hourly.get_hourly(location, start_date, end_date)
+
+    def get_hourly_frame(
+        self,
+        location: LocationInput,
+        start_date: str | date,
+        end_date: str | date | None = None,
+    ) -> "pd.DataFrame":
+        """Get hourly observations as a pandas DataFrame.
+
+        One row per hour, metadata columns followed by the value columns
+        (in the configured units). Requires the ``pandas`` extra.
+
+        Args:
+            location: 5-digit US ZIP code, "lat,lon" string, or
+                (lat, lon) tuple.
+            start_date: First UTC date (YYYY-MM-DD) or date object.
+            end_date: Last UTC date; defaults to start_date (single day).
+
+        Returns:
+            A tidy DataFrame of the hourly results.
+
+        Raises:
+            ImportError: If pandas is not installed.
+        """  # noqa: DOC502 - raised by hourly_results_to_frame
+        from get_weather_data.weather.frame import hourly_results_to_frame
+
+        results = self.get_hourly(location, start_date, end_date)
+        return hourly_results_to_frame(results)
 
     def coverage(
         self,

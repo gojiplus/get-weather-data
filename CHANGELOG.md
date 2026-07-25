@@ -2,6 +2,21 @@
 
 Notable changes to get-weather-data. Versions follow the git tags.
 
+## 6.0.0
+
+Added
+
+- Hourly data via NOAA ISD-Lite: `Weather.get_hourly(location, start,
+  end)` returns one `HourlyResult` per hour (temp, dewpoint,
+  sea-level pressure, wind direction/speed, sky code, 1h/6h precip) at
+  the nearest USAF-WBAN station; `get_hourly_frame(...)` for pandas and
+  `get-weather hourly ...` on the CLI. Timestamps are UTC.
+- New public `HourlyResult` type and `weather/isd.py` reader.
+
+This is a major version because it adds a new result type and API
+surface; the daily API is unchanged. Hourly needs the local database
+(there is no online/CDO equivalent for ISD-Lite).
+
 ## 5.3.0
 
 Added

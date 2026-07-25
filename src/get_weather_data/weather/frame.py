@@ -7,7 +7,7 @@ Imports are deferred so the base package stays pandas-free.
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 
-from get_weather_data.weather.results import WeatherResult
+from get_weather_data.weather.results import HourlyResult, WeatherResult
 from get_weather_data.weather.units import ELEMENTS
 from get_weather_data.weather.weather_types import format_weather_types
 
@@ -118,3 +118,52 @@ def result_to_frame(result: WeatherResult) -> "pd.DataFrame":
         ImportError: If pandas is not installed.
     """  # noqa: DOC502 - raised by results_to_frame
     return results_to_frame([result])
+
+
+# Hourly output columns, in order: metadata then values.
+_HOURLY_META = [
+    "observed_at",
+    "zipcode",
+    "latitude",
+    "longitude",
+    "station_id",
+    "station_name",
+    "station_distance_meters",
+    "units",
+]
+_HOURLY_VALUES = [
+    "temp",
+    "dewpoint",
+    "sea_level_pressure",
+    "wind_direction",
+    "wind_speed",
+    "sky_condition",
+    "precip_1h",
+    "precip_6h",
+]
+
+
+def hourly_results_to_frame(results: Sequence[HourlyResult]) -> "pd.DataFrame":
+    """Convert hourly results to a tidy DataFrame.
+
+    One row per hour, metadata columns followed by the value columns.
+    The ``observed_at`` column is a UTC-aware datetime.
+
+    Args:
+        results: Hourly results, e.g. from ``Weather.get_hourly``.
+
+    Returns:
+        A DataFrame with a stable column schema even when empty; value
+        columns carry the results' units.
+
+    Raises:
+        ImportError: If pandas is not installed.
+    """  # noqa: DOC502 - raised by _require_pandas
+    pd = _require_pandas()
+    columns = _HOURLY_META + _HOURLY_VALUES
+    rows = [
+        {column: getattr(result, column) for column in columns} for result in results
+    ]
+    frame = pd.DataFrame(rows, columns=columns)
+    frame["observed_at"] = pd.to_datetime(frame["observed_at"], utc=True)
+    return frame

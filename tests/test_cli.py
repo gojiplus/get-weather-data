@@ -1,6 +1,6 @@
 """Tests for CLI commands."""
 
-from datetime import date
+from datetime import UTC, date
 
 import respx
 from click.testing import CliRunner
@@ -49,6 +49,25 @@ class _FakeWeather:
         _FakeWeather.last_kwargs = kwargs
         return 3
 
+    def get_hourly(self, location, start_date, end_date=None):
+        from datetime import datetime
+
+        from get_weather_data.weather.results import HourlyResult
+
+        return [
+            HourlyResult(
+                observed_at=datetime(2023, 7, 16, 0, tzinfo=UTC),
+                station_id="725030-14732",
+                station_name="LA GUARDIA",
+                station_distance_meters=942,
+                units="metric",
+                temp=27.2,
+                dewpoint=21.0,
+                wind_speed=4.6,
+                wind_direction=170,
+            )
+        ]
+
 
 class TestCliCommands:
     def test_setup(self, monkeypatch):
@@ -68,6 +87,23 @@ class TestCliCommands:
         assert "Maximum temperature" in result.output
         # zero precip renders as a value, not N/A
         assert "0.0" in result.output
+
+    def test_hourly_table(self, monkeypatch):
+        monkeypatch.setattr(cli_module, "Weather", _FakeWeather)
+        result = CliRunner().invoke(cli, ["hourly", "11371", "2023-07-16"])
+        assert result.exit_code == 0
+        assert "LA GUARDIA" in result.output
+        assert "2023-07-16 00:00" in result.output
+
+    def test_hourly_empty(self, monkeypatch):
+        class NoData(_FakeWeather):
+            def get_hourly(self, *a, **k):
+                return []
+
+        monkeypatch.setattr(cli_module, "Weather", NoData)
+        result = CliRunner().invoke(cli, ["hourly", "11371", "2023-07-16"])
+        assert result.exit_code == 0
+        assert "No hourly data" in result.output
 
     def test_get_error(self, monkeypatch):
         class Boom(_FakeWeather):

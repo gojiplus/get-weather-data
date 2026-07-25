@@ -188,6 +188,77 @@ def get(
 
 
 @cli.command()
+@click.argument("location")
+@click.argument("target_date")
+@click.option("--end", "end_date", help="End date YYYY-MM-DD (default: single day)")
+@click.option(
+    "--units",
+    type=click.Choice(["metric", "imperial"]),
+    default="metric",
+    help="Unit system for the values shown",
+)
+@click.pass_context
+def hourly(
+    ctx: click.Context,
+    location: str,
+    target_date: str,
+    end_date: str | None,
+    units: str,
+) -> None:
+    """Get hourly weather (ISD-Lite) for a location and date.
+
+    LOCATION: 5-digit US ZIP code or "lat,lon" coordinates.
+
+    TARGET_DATE: UTC date in YYYY-MM-DD format. Times shown are UTC.
+    Requires the local database (run 'get-weather setup' first).
+    """
+    try:
+        weather = Weather(
+            database_path=ctx.obj["database"],
+            verbose=ctx.obj["verbose"],
+            units=units,  # type: ignore[arg-type]
+        )
+        results = weather.get_hourly(location, target_date, end_date)
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        sys.exit(1)
+
+    if not results:
+        console.print("[yellow]No hourly data found near this location.[/yellow]")
+        return
+
+    temp_label = unit_label("TMAX", results[0].units)
+    wind_label = "mph" if results[0].units == "imperial" else "m/s"
+    table = Table(title=f"Hourly weather for {location} (UTC)")
+    table.add_column("Time (UTC)", style="cyan")
+    table.add_column(f"Temp ({temp_label})", justify="right")
+    table.add_column(f"Dewpt ({temp_label})", justify="right")
+    table.add_column(f"Wind ({wind_label})", justify="right")
+    table.add_column("Dir", justify="right")
+
+    def _fmt(value: float | int | None, digits: int = 1) -> str:
+        return (
+            f"{value:.{digits}f}"
+            if isinstance(value, float)
+            else (str(value) if value is not None else "—")
+        )
+
+    for r in results:
+        table.add_row(
+            r.observed_at.strftime("%Y-%m-%d %H:%M"),
+            _fmt(r.temp),
+            _fmt(r.dewpoint),
+            _fmt(r.wind_speed),
+            _fmt(r.wind_direction),
+        )
+    console.print(table)
+    station = results[0]
+    console.print(
+        f"Station: {station.station_name} ({station.station_distance_meters:,} m away)"
+    )
+
+
+@cli.command()
 @click.argument("input_file", type=click.Path(exists=True))
 @click.argument("output_file", type=click.Path())
 @click.option("--zip-column", default="zip", help="ZIP code column name or index")

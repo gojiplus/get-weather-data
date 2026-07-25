@@ -25,7 +25,7 @@ from importlib.metadata import PackageNotFoundError, version
 
 from get_weather_data.main import Weather
 from get_weather_data.weather.location import LocationInput
-from get_weather_data.weather.results import Coverage, WeatherResult
+from get_weather_data.weather.results import Coverage, HourlyResult, WeatherResult
 from get_weather_data.weather.units import Units
 
 # Library hygiene: attach a NullHandler so importing the package never
@@ -39,6 +39,7 @@ except PackageNotFoundError:
 
 __all__ = [
     "Coverage",
+    "HourlyResult",
     "LocationInput",
     "Units",
     "Weather",

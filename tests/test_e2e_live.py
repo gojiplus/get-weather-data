@@ -119,6 +119,22 @@ def test_weather_types_off_by_default():
     assert r.weather_types is None
 
 
+def test_hourly_traces_a_day():
+    """ISD-Lite hourly for a well-instrumented airport traces a full day."""
+    w = Weather(units="imperial")  # local DB; hourly needs setup()
+    if not w.db.exists():
+        pytest.skip("no local station database")
+    results = w.get_hourly("11371", date(2023, 7, 16))  # LaGuardia
+    if not results:
+        pytest.skip("no ISD-Lite data for this station/date")
+    assert 20 <= len(results) <= 24  # a near-complete UTC day
+    assert results == sorted(results, key=lambda r: r.observed_at)
+    temps = [r.temp for r in results if r.temp is not None]
+    assert temps  # some temperature readings
+    assert all(-40.0 <= t <= 130.0 for t in temps)  # plausible °F
+    assert results[0].observed_at.tzinfo is not None  # UTC-aware
+
+
 @online_only
 def test_explain_reports_provenance():
     """explain=True attaches a station count and per-field reasons."""
