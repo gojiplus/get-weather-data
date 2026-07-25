@@ -68,6 +68,7 @@ source = "uv-dynamic-versioning"
 [tool.ruff]
 line-length = 88
 target-version = "py311"
+extend-exclude = ["app"]
 
 [tool.ruff.lint]
 external = ["DOC"]

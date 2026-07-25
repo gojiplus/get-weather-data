@@ -13,6 +13,8 @@ Added
   (`pip install get-weather-data[grid]`).
 - `source="auto"` prefers raw station observations and fills days the
   station network cannot cover from the grid.
+- A no-code [Streamlit app](app/) (gridded backend, no key/quota) for
+  point-and-click access.
 
 ## 4.2.0
 

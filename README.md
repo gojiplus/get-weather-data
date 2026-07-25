@@ -11,6 +11,14 @@ Historical daily weather for any US ZIP code or latitude/longitude.
 NOAA station data (GHCN Daily and GSOD), automatic nearest-station
 selection, consistent metric or imperial output.
 
+## No-code app
+
+Prefer clicking to coding? A [Streamlit app](app/) gives the same data
+through a web UI — enter a ZIP or lat/lon, pick dates, get a table,
+chart, and CSV download. Run it with
+`streamlit run app/streamlit_app.py` or deploy it free on Streamlit
+Community Cloud.
+
 ## Installation
 
 ```bash
