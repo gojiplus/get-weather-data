@@ -11,10 +11,12 @@ import csv
 import logging
 import os
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import ExitStack
 from dataclasses import dataclass
 from datetime import date
 from itertools import islice
 from pathlib import Path
+from typing import Any, TextIO
 
 from get_weather_data.core.database import Database
 from get_weather_data.weather.lookup import WeatherLookup
@@ -49,6 +51,110 @@ def _weather_columns(include_weather_types: bool, explain: bool = False) -> list
     return columns
 
 
+# Weather columns that carry native numeric types in Parquet output.
+_FLOAT_COLUMNS = frozenset(_VALUE_COLUMNS)
+_INT_COLUMNS = frozenset({"station_distance_meters", "stations_considered"})
+
+
+def _parquet_schema(
+    passthrough: list[str], include_weather_types: bool, explain: bool
+) -> "Any":
+    """Build the pyarrow schema for the batch Parquet output."""
+    import pyarrow as pa
+
+    fields = [pa.field(name, pa.string()) for name in passthrough]
+    for name in _weather_columns(include_weather_types, explain):
+        if name in _FLOAT_COLUMNS:
+            fields.append(pa.field(name, pa.float64()))
+        elif name in _INT_COLUMNS:
+            fields.append(pa.field(name, pa.int64()))
+        else:
+            fields.append(pa.field(name, pa.string()))
+    return pa.schema(fields)
+
+
+class _CsvSink:
+    """Stream output rows to a CSV file, one chunk at a time."""
+
+    def __init__(
+        self,
+        outfile: "TextIO",
+        input_fieldnames: list[str],
+        include_weather_types: bool,
+        explain: bool,
+    ) -> None:
+        self._outfile = outfile
+        self._iwt = include_weather_types
+        self._explain = explain
+        fieldnames = input_fieldnames + _weather_columns(include_weather_types, explain)
+        self._writer = csv.DictWriter(outfile, fieldnames=fieldnames)
+        self._writer.writeheader()
+        outfile.flush()
+
+    def write_row(
+        self, row_data: dict[str, str], result: "WeatherResult | None", error: str
+    ) -> None:
+        """Append one output row."""
+        row_data.update(_result_to_dict(result, error, self._iwt, self._explain))
+        self._writer.writerow(row_data)
+
+    def flush_chunk(self) -> None:
+        """Flush the current chunk to disk."""
+        self._outfile.flush()
+
+    def close(self) -> None:
+        """Close the sink (no-op for CSV; the file is closed by caller)."""
+
+
+class _ParquetSink:
+    """Stream output rows to a Parquet file, one chunk per row group."""
+
+    def __init__(
+        self,
+        path: Path,
+        input_fieldnames: list[str],
+        include_weather_types: bool,
+        explain: bool,
+    ) -> None:
+        import pyarrow.parquet as pq
+
+        self._iwt = include_weather_types
+        self._explain = explain
+        weather = set(_weather_columns(include_weather_types, explain))
+        self._passthrough = [c for c in input_fieldnames if c not in weather]
+        self._schema = _parquet_schema(
+            self._passthrough, include_weather_types, explain
+        )
+        self._writer = pq.ParquetWriter(str(path), self._schema)
+        self._buffer: list[dict[str, object]] = []
+
+    def write_row(
+        self, row_data: dict[str, str], result: "WeatherResult | None", error: str
+    ) -> None:
+        """Buffer one output row for the current chunk."""
+        typed = _result_to_typed(result, error, self._iwt, self._explain)
+        self._buffer.append(
+            {**{c: row_data.get(c) for c in self._passthrough}, **typed}
+        )
+
+    def flush_chunk(self) -> None:
+        """Write the buffered chunk as one Parquet row group."""
+        import pyarrow as pa
+
+        if not self._buffer:
+            return
+        columns = {
+            field.name: [row.get(field.name) for row in self._buffer]
+            for field in self._schema
+        }
+        self._writer.write_table(pa.table(columns, schema=self._schema))
+        self._buffer.clear()
+
+    def close(self) -> None:
+        """Finalize the Parquet file."""
+        self._writer.close()
+
+
 @dataclass
 class _Row:
     """Internal row representation for parallel processing."""
@@ -73,6 +179,7 @@ def process_csv(
     units: Units = "metric",
     include_weather_types: bool = False,
     explain: bool = False,
+    output_format: str | None = None,
     parallel: bool = True,
     max_workers: int | None = None,
 ) -> int:
@@ -80,7 +187,7 @@ def process_csv(
 
     Args:
         input_path: Path to input CSV file.
-        output_path: Path to output CSV file.
+        output_path: Path to output file (CSV or Parquet).
         zipcode_column: Column name or index for ZIP code.
         lat_column: Column name or index for latitude (with lon_column,
             takes precedence over the ZIP column when both are present).
@@ -95,6 +202,10 @@ def process_csv(
             with the day's present-weather phenomena (comma-joined).
         explain: If True, add ``stations_considered`` and ``missing``
             columns explaining why any requested value is absent.
+        output_format: "csv" or "parquet". Defaults to inferring from the
+            output path suffix (".parquet" -> parquet, else csv). Parquet
+            needs the ``parquet`` extra and gives typed, compressed
+            columns for the analytical workflow.
         parallel: Use parallel processing for faster execution.
         max_workers: Number of worker threads (default: CPU count).
 
@@ -103,6 +214,8 @@ def process_csv(
     """
     input_path = Path(input_path)
     output_path = Path(output_path)
+    if output_format is None:
+        output_format = "parquet" if output_path.suffix.lower() == ".parquet" else "csv"
 
     if db is None:
         db = Database()
@@ -115,7 +228,6 @@ def process_csv(
         include_weather_types=include_weather_types,
         explain=explain,
     )
-    weather_columns = _weather_columns(include_weather_types, explain)
 
     def parse_row(row: dict[str, str]) -> _Row:
         location: str | tuple[float, float] | None = None
@@ -156,38 +268,44 @@ def process_csv(
     processed = 0
     errors = 0
 
-    with (
-        open(input_path, encoding="utf-8", errors="replace") as infile,
-        open(output_path, "w", encoding="utf-8", newline="") as outfile,
-    ):
+    with ExitStack() as stack:
+        infile = stack.enter_context(
+            open(input_path, encoding="utf-8", errors="replace")
+        )
         reader = csv.DictReader(infile)
-        fieldnames = list(reader.fieldnames or []) + weather_columns
-        writer = csv.DictWriter(outfile, fieldnames=fieldnames)
-        writer.writeheader()
-        outfile.flush()
+        input_fieldnames = list(reader.fieldnames or [])
 
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            while True:
-                chunk = [parse_row(row) for row in islice(reader, CHUNK_SIZE)]
-                if not chunk:
-                    break
+        sink: _CsvSink | _ParquetSink
+        if output_format == "parquet":
+            sink = _ParquetSink(
+                output_path, input_fieldnames, include_weather_types, explain
+            )
+        else:
+            outfile = stack.enter_context(
+                open(output_path, "w", encoding="utf-8", newline="")
+            )
+            sink = _CsvSink(outfile, input_fieldnames, include_weather_types, explain)
+        stack.callback(sink.close)
 
-                if parallel and len(chunk) > 1:
-                    outputs = list(executor.map(process_row, chunk))
-                else:
-                    outputs = [process_row(parsed) for parsed in chunk]
+        executor = stack.enter_context(ThreadPoolExecutor(max_workers=max_workers))
+        while True:
+            chunk = [parse_row(row) for row in islice(reader, CHUNK_SIZE)]
+            if not chunk:
+                break
 
-                for row_data, result, error in outputs:
-                    row_data.update(
-                        _result_to_dict(result, error, include_weather_types, explain)
-                    )
-                    writer.writerow(row_data)
-                    if error:
-                        errors += 1
-                outfile.flush()
+            if parallel and len(chunk) > 1:
+                outputs = list(executor.map(process_row, chunk))
+            else:
+                outputs = [process_row(parsed) for parsed in chunk]
 
-                processed += len(chunk)
-                logger.info(f"Processed {processed} rows...")
+            for row_data, result, error in outputs:
+                sink.write_row(row_data, result, error)
+                if error:
+                    errors += 1
+            sink.flush_chunk()
+
+            processed += len(chunk)
+            logger.info(f"Processed {processed} rows...")
 
     if errors:
         logger.warning(f"{errors} of {processed} rows had errors (see weather_error)")
@@ -238,27 +356,54 @@ def _cell(value: object) -> str:
     return "" if value is None else str(value)
 
 
+def _result_to_typed(
+    result: WeatherResult | None,
+    error: str,
+    include_weather_types: bool = False,
+    explain: bool = False,
+) -> dict[str, object]:
+    """Convert a WeatherResult (or an error) to native-typed columns.
+
+    Value columns are float|None, station_distance_meters and
+    stations_considered are int|None, and the rest are str|None. The CSV
+    path stringifies this; the Parquet path keeps the native types.
+
+    Args:
+        result: The result to render, or None for an errored row.
+        error: The error message (blank when the row succeeded).
+        include_weather_types: Whether to add the weather_types column.
+        explain: Whether to add the provenance columns.
+
+    Returns:
+        A row dict keyed by the weather output column names.
+    """
+    columns = _weather_columns(include_weather_types, explain)
+    if result is None:
+        empty: dict[str, object] = {}
+        for name in columns:
+            empty[name] = None
+        empty["weather_error"] = error
+        return empty
+    row: dict[str, object] = {c: getattr(result, c) for c in _STATION_COLUMNS}
+    row.update({field: getattr(result, field) for field in _VALUE_COLUMNS})
+    if include_weather_types:
+        row["weather_types"] = format_weather_types(result.weather_types) or None
+    if explain:
+        row["stations_considered"] = result.stations_considered
+        row["missing"] = _format_missing(result.missing) or None
+    row["weather_error"] = error
+    return row
+
+
 def _result_to_dict(
     result: WeatherResult | None,
     error: str,
     include_weather_types: bool = False,
     explain: bool = False,
 ) -> dict[str, str]:
-    """Convert a WeatherResult (or an error) to CSV output columns."""
-    columns = _weather_columns(include_weather_types, explain)
-    if result is None:
-        empty = dict.fromkeys(columns, "")
-        empty["weather_error"] = error
-        return empty
-    row = {column: _cell(getattr(result, column)) for column in _STATION_COLUMNS}
-    row.update({field: _cell(getattr(result, field)) for field in _VALUE_COLUMNS})
-    if include_weather_types:
-        row["weather_types"] = format_weather_types(result.weather_types)
-    if explain:
-        row["stations_considered"] = _cell(result.stations_considered)
-        row["missing"] = _format_missing(result.missing)
-    row["weather_error"] = error
-    return row
+    """Convert a WeatherResult (or an error) to CSV (string) columns."""
+    typed = _result_to_typed(result, error, include_weather_types, explain)
+    return {key: _cell(value) for key, value in typed.items()}
 
 
 def _format_missing(missing: dict[str, str] | None) -> str:

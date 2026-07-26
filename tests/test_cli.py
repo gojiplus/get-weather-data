@@ -134,6 +134,25 @@ class TestCliCommands:
         # date-column given -> year/month/day nulled
         assert _FakeWeather.last_kwargs["year_column"] is None
 
+    def test_process_parquet_format(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(cli_module, "Weather", _FakeWeather)
+        infile = tmp_path / "in.csv"
+        infile.write_text("zip,date\n10001,2024-01-15\n")
+        result = CliRunner().invoke(
+            cli,
+            [
+                "process",
+                str(infile),
+                str(tmp_path / "out.parquet"),
+                "--date-column",
+                "date",
+                "--format",
+                "parquet",
+            ],
+        )
+        assert result.exit_code == 0
+        assert _FakeWeather.last_kwargs["output_format"] == "parquet"
+
     def test_cache_info(self, monkeypatch):
         monkeypatch.setattr(
             cache_module,

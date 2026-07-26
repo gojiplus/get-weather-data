@@ -43,6 +43,10 @@ grid = [
     "xarray>=2024.0",
     "netCDF4>=1.6",
 ]
+parquet = [
+    "pyarrow>=15.0",
+    "duckdb>=1.0",
+]
 
 [project.scripts]
 get-weather = "get_weather_data.cli:main"
@@ -139,6 +143,8 @@ test = [
     "pandas>=2.0",  # exercises the optional get_frame path
     "xarray>=2024.0",  # exercises the optional gridded backend
     "netCDF4>=1.6",
+    "pyarrow>=15.0",  # exercises the optional Parquet export path
+    "duckdb>=1.0",  # exercises the optional DuckDB query path
 ]
 docs = [
     "sphinx>=8",

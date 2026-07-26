@@ -128,6 +128,9 @@ Notes on online mode:
   (~9K airport stations), and the nClimGrid gridded product
 - **Robust batch processing**: streams CSVs in chunks, one bad row gets
   a `weather_error` note instead of killing the job
+- **Parquet + SQL**: stream batch output to columnar Parquet and query
+  it (or a glob of many files) with `query_weather(...)` via DuckDB
+  (`pip install get-weather-data[parquet]`)
 - **Cache management**: TTL-based refresh of station lists,
   `get-weather cache info` / `cache clear`
 
@@ -187,6 +190,33 @@ weather.process_csv(
 Output rows carry the weather columns below (already in your chosen
 units), plus `weather_error` explaining any row that could not be
 resolved. More examples in the [examples/](examples/) directory.
+
+### Parquet output and SQL queries
+
+For the analytical "millions of rows" workflow, write results as
+**Parquet** (typed, compressed columns — far smaller than CSV and
+directly queryable) and run **SQL** over them with DuckDB. Needs the
+`parquet` extra (`pip install get-weather-data[parquet]`):
+
+```python
+from get_weather_data import Weather, query_weather
+
+# Streaming Parquet output (inferred from the .parquet suffix; no pandas
+# needed, memory stays bounded over millions of rows):
+Weather().process_csv("locations.csv", "weather.parquet", date_column="date")
+
+# Query one file or a glob of many with SQL:
+rows = query_weather(
+    "SELECT station_id, avg(tmax) AS mean_high "
+    "FROM t WHERE prcp > 0 GROUP BY station_id ORDER BY mean_high DESC",
+    tables={"t": "weather.parquet"},  # or "runs/*.parquet"
+)
+```
+
+`get-weather process in.csv out.parquet` (or `--format parquet`) does
+the same on the CLI. The daily and hourly DataFrames also write Parquet
+directly: `get_frame(...).to_parquet(path)` /
+`get_hourly_frame(...).to_parquet(path)`.
 
 ### Interpolate between stations
 
