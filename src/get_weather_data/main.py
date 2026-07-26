@@ -394,6 +394,7 @@ class Weather:
         year_column: str | int | None = "year",
         month_column: str | int | None = "month",
         day_column: str | int | None = "day",
+        output_format: str | None = None,
         parallel: bool = True,
         max_workers: int | None = None,
     ) -> int:
@@ -401,7 +402,7 @@ class Weather:
 
         Args:
             input_path: Path to input CSV file.
-            output_path: Path to output CSV file.
+            output_path: Path to output file (CSV or Parquet).
             zipcode_column: Column name or index for ZIP code.
             lat_column: Column for latitude (used with lon_column).
             lon_column: Column for longitude.
@@ -409,6 +410,8 @@ class Weather:
             year_column: Column for year (if no date_column).
             month_column: Column for month (if no date_column).
             day_column: Column for day (if no date_column).
+            output_format: "csv" or "parquet"; inferred from the output
+                path suffix when None (Parquet needs the ``parquet`` extra).
             parallel: Use parallel processing for faster execution.
             max_workers: Number of worker threads (default: CPU count, max 8).
 
@@ -440,6 +443,7 @@ class Weather:
             units=self.units,
             include_weather_types=self.include_weather_types,
             explain=self.explain,
+            output_format=output_format,
             parallel=parallel,
             max_workers=max_workers,
         )

@@ -284,6 +284,13 @@ def hourly(
     is_flag=True,
     help="Add stations_considered and missing columns explaining gaps",
 )
+@click.option(
+    "--format",
+    "output_format",
+    type=click.Choice(["csv", "parquet"]),
+    default=None,
+    help="Output format (default: inferred from the output file suffix)",
+)
 @click.option("--parallel/--no-parallel", default=True, help="Use parallel processing")
 @click.option("--workers", type=int, help="Number of worker threads (default: auto)")
 @click.pass_context
@@ -301,6 +308,7 @@ def process(
     day_column: str,
     weather_types: bool,
     explain: bool,
+    output_format: str | None,
     parallel: bool,
     workers: int | None,
 ) -> None:
@@ -333,6 +341,7 @@ def process(
         year_column=year_column if not date_column else None,
         month_column=month_column if not date_column else None,
         day_column=day_column if not date_column else None,
+        output_format=output_format,
         parallel=parallel,
         max_workers=workers,
     )

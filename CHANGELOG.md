@@ -2,6 +2,20 @@
 
 Notable changes to get-weather-data. Versions follow the git tags.
 
+## 6.1.0
+
+Added
+
+- Parquet output: `process_csv(..., output_format="parquet")` (or an
+  output path ending in `.parquet`, or `get-weather process ... --format
+  parquet`) streams typed, compressed columns instead of CSV — no pandas
+  needed, memory stays bounded over millions of rows.
+- SQL over Parquet: `query_weather(sql, tables={...})` runs DuckDB
+  queries against one Parquet file or a glob of many, returning row
+  dicts (or a DataFrame with `as_frame=True`).
+- New optional `parquet` extra (`pyarrow` + `duckdb`); the base import
+  stays free of both.
+
 ## 6.0.0
 
 Added
