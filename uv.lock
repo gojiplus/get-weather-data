@@ -440,6 +440,7 @@ wheels = [
 
 [[package]]
 name = "get-weather-data"
+version = "6.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
@@ -477,6 +478,7 @@ dev = [
     { name = "pytest-mock" },
     { name = "respx" },
     { name = "ruff" },
+    { name = "scipy" },
     { name = "xarray" },
 ]
 docs = [
@@ -496,6 +498,7 @@ test = [
     { name = "pytest-cov" },
     { name = "pytest-mock" },
     { name = "respx" },
+    { name = "scipy" },
     { name = "xarray" },
 ]
 
@@ -511,7 +514,7 @@ requires-dist = [
     { name = "scipy", marker = "extra == 'fast'", specifier = ">=1.11" },
     { name = "xarray", marker = "extra == 'grid'", specifier = ">=2024.0" },
 ]
-provides-extras = ["fast", "grid", "pandas", "parquet"]
+provides-extras = ["fast", "pandas", "grid", "parquet"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -527,6 +530,7 @@ dev = [
     { name = "pytest-mock", specifier = ">=3.12" },
     { name = "respx", specifier = ">=0.21" },
     { name = "ruff", specifier = ">=0.14" },
+    { name = "scipy", specifier = ">=1.11" },
     { name = "xarray", specifier = ">=2024.0" },
 ]
 docs = [
@@ -545,6 +549,7 @@ test = [
     { name = "pytest-cov", specifier = ">=6" },
     { name = "pytest-mock", specifier = ">=3.12" },
     { name = "respx", specifier = ">=0.21" },
+    { name = "scipy", specifier = ">=1.11" },
     { name = "xarray", specifier = ">=2024.0" },
 ]
 
