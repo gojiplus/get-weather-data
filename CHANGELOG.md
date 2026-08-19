@@ -2,6 +2,14 @@
 
 Notable changes to get-weather-data. Versions follow the git tags.
 
+## [Unreleased]
+
+Changed
+
+- Build backend switched from hatchling + uv-dynamic-versioning to
+  uv_build with a static version, matching the py-canon template; the
+  version now lives in pyproject.toml and is bumped at release time.
+
 ## 6.1.0
 
 Added
