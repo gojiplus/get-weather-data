@@ -6,6 +6,6 @@ authors:
 - family-names: "Sood"
   given-names: "Gaurav"
 title: "Get Weather Data"
-version: 0.1.31
-date-released: 2016-07-17
+version: 6.1.0
+date-released: 2026-07-25
 url: "https://github.com/gojiplus/get-weather-data/"
