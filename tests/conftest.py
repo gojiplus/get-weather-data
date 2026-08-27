@@ -1,5 +1,7 @@
 """Shared test fixtures."""
 
+from collections.abc import Generator
+
 import pytest
 
 from get_weather_data.core.database import Database
@@ -41,11 +43,12 @@ def sample_stations() -> list[Station]:
 
 
 @pytest.fixture
-def temp_db(tmp_path) -> Database:
-    """Create a temporary database."""
+def temp_db(tmp_path) -> Generator[Database, None, None]:
+    """Create a temporary database, closed when the test ends."""
     db = Database(tmp_path / "test.sqlite")
     db.init_schema()
-    return db
+    yield db
+    db.close()
 
 
 @pytest.fixture
