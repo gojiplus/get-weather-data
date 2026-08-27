@@ -1,5 +1,7 @@
 """GHCN (Global Historical Climatology Network) daily data fetching."""
 
+import atexit
+import contextlib
 import csv
 import gzip
 import logging
@@ -38,8 +40,32 @@ GHCN_ELEMENTS = [
 _locks_guard = threading.Lock()
 _year_locks: dict[int, threading.Lock] = {}
 
+
 # Per-thread, per-year read-only connections (multi-GB files; opening a
 # fresh connection per row lookup is wasteful).
+class _YearPool:
+    """A thread's read-only GHCN connections, closed when the thread ends.
+
+    Holding the connections in an object rather than a bare dict means the
+    thread-local going away collects this, and sqlite3 never has to finalise
+    an open connection itself (which is what emitted ResourceWarning).
+    """
+
+    def __init__(self) -> None:
+        self.conns: dict[int, sqlite3.Connection] = {}
+
+    def close(self) -> None:
+        """Close and forget every connection in the pool."""
+        for conn in self.conns.values():
+            conn.close()
+        self.conns.clear()
+
+    def __del__(self) -> None:
+        """Close the pool when the owning thread is collected."""
+        with contextlib.suppress(Exception):  # shutdown ordering
+            self.close()
+
+
 _connections = threading.local()
 
 
@@ -153,15 +179,31 @@ def _build_year_db(db_file: Path, gz_path: Path, year: int) -> None:
 
 def _year_connection(year: int, db_path: Path) -> sqlite3.Connection:
     """Get this thread's read-only connection for a year."""
-    pool: dict[int, sqlite3.Connection] | None = getattr(_connections, "pool", None)
+    pool: _YearPool | None = getattr(_connections, "pool", None)
     if pool is None:
-        pool = {}
+        pool = _YearPool()
         _connections.pool = pool
-    conn = pool.get(year)
+    conn = pool.conns.get(year)
     if conn is None:
         conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
-        pool[year] = conn
+        pool.conns[year] = conn
     return conn
+
+
+def close_year_connections() -> None:
+    """Close this thread's cached read-only GHCN connections.
+
+    The pool is thread-local and otherwise lives until the thread dies,
+    at which point sqlite3 finalises the connections itself and warns.
+    Worker threads call this on the way out; the main thread's pool is
+    closed at exit.
+    """
+    pool: _YearPool | None = getattr(_connections, "pool", None)
+    if pool is not None:
+        pool.close()
+
+
+atexit.register(close_year_connections)
 
 
 def _read_ghcn_rows(

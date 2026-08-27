@@ -1,6 +1,7 @@
 """Tests for the yearly GHCN database build (locking, atomicity)."""
 
 import csv
+import gc
 import gzip
 import io
 import sqlite3
@@ -171,8 +172,36 @@ class TestReadOnlyPool:
         )
         ghcn.get_ghcn_data("USW00094728", date(2010, 1, 15))
         pool = ghcn._connections.pool
-        conn = pool[2010]
+        conn = pool.conns[2010]
         ghcn.get_ghcn_data("USW00094728", date(2010, 1, 16))
-        assert ghcn._connections.pool[2010] is conn
+        assert ghcn._connections.pool.conns[2010] is conn
         with pytest.raises(sqlite3.OperationalError):
             conn.execute("CREATE TABLE nope (x)")
+
+
+class TestPoolClosesItself:
+    """The read-only pool must not leave connections for sqlite3 to finalise."""
+
+    def test_pool_closes_its_connections(self, tmp_path) -> None:
+        """close() shuts every pooled connection and empties the pool."""
+        pool = ghcn._YearPool()
+        conn = sqlite3.connect(tmp_path / "y.sqlite")
+        pool.conns[2010] = conn
+
+        pool.close()
+
+        assert pool.conns == {}
+        with pytest.raises(sqlite3.ProgrammingError):
+            conn.execute("SELECT 1")
+
+    def test_dropping_a_pool_closes_it(self, tmp_path) -> None:
+        """A pool that goes out of scope closes rather than warning."""
+        conn = sqlite3.connect(tmp_path / "y.sqlite")
+        pool = ghcn._YearPool()
+        pool.conns[2010] = conn
+
+        del pool
+        gc.collect()
+
+        with pytest.raises(sqlite3.ProgrammingError):
+            conn.execute("SELECT 1")

@@ -1,5 +1,6 @@
 """Database operations for get-weather-data."""
 
+import contextlib
 import logging
 import sqlite3
 import threading
@@ -34,6 +35,11 @@ class Database:
         # connections across Database instances pointing at different
         # files within the same thread
         self._local = threading.local()
+        # close() must reach every thread's connection, not just the caller's.
+        # A thread-local alone leaks any connection opened by a worker thread,
+        # because that thread's slot is invisible from here.
+        self._connections: list[sqlite3.Connection] = []
+        self._connections_lock = threading.Lock()
         db_path = get_config().database_path if path is None else Path(path)
         self.path = db_path
         self._station_cache: dict[str, tuple[str, str]] | None = None
@@ -49,6 +55,8 @@ class Database:
             self._local.conn.execute("PRAGMA journal_mode=WAL")
             self._local.conn.execute("PRAGMA synchronous=NORMAL")
             self._local.conn.execute("PRAGMA cache_size=10000")
+            with self._connections_lock:
+                self._connections.append(self._local.conn)
         return self._local.conn  # type: ignore[no-any-return]
 
     @contextmanager
@@ -57,10 +65,31 @@ class Database:
         yield self._get_connection()
 
     def close(self) -> None:
-        """Close the database connection."""
-        if hasattr(self._local, "conn") and self._local.conn:
-            self._local.conn.close()
-            self._local.conn = None
+        """Close every connection this database has opened, on any thread."""
+        with self._connections_lock:
+            connections, self._connections = self._connections, []
+        for conn in connections:
+            conn.close()
+        self._local.conn = None
+
+    def __enter__(self) -> "Database":
+        """Enter a context that closes the database on exit."""
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        """Close the database."""
+        self.close()
+
+    def __del__(self) -> None:
+        """Close on collection, so an abandoned Database does not leak.
+
+        Most callers build a Database and drop it without closing, which
+        left sqlite3 to emit ResourceWarning from its own finaliser. Best
+        effort: during interpreter shutdown the attributes may already be
+        gone.
+        """
+        with contextlib.suppress(Exception):  # shutdown ordering
+            self.close()
 
     def execute(self, sql: str, params: tuple[Any, ...] = ()) -> list[tuple[Any, ...]]:
         """Execute SQL and return all results."""

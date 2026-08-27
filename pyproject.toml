@@ -81,16 +81,20 @@ convention = "google"
 testpaths = ["tests"]
 # Exclude network/live tests by default (CI's fixed pytest command inherits
 # this); run them locally with `pytest -m live`.
-addopts = "-v --tb=short -m 'not live'"
+addopts = "-v --tb=short -m 'not live' --strict-config --strict-markers -ra"
 pythonpath = ["src"]
 markers = [
     "live: hits real NOAA endpoints; excluded by default, run with -m live",
 ]
 filterwarnings = [
+    "error",
     "ignore::DeprecationWarning:xarray",
     "ignore::DeprecationWarning:netCDF4",
     "ignore::DeprecationWarning:pandas",
 ]
+minversion = "6"
+log_level = "INFO"
+xfail_strict = true
 
 [tool.coverage.run]
 source = ["src/get_weather_data"]
