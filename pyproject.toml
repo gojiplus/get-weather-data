@@ -143,3 +143,6 @@ docs = [
     "sphinx-copybutton",
     "py-canon @ git+https://github.com/gojiplus/py-canon@v1",
 ]
+
+[tool.codespell]
+builtin = "clear,rare,en-GB_to_en-US"

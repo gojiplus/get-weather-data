@@ -47,7 +47,7 @@ class _YearPool:
     """A thread's read-only GHCN connections, closed when the thread ends.
 
     Holding the connections in an object rather than a bare dict means the
-    thread-local going away collects this, and sqlite3 never has to finalise
+    thread-local going away collects this, and sqlite3 never has to finalize
     an open connection itself (which is what emitted ResourceWarning).
     """
 
@@ -194,7 +194,7 @@ def close_year_connections() -> None:
     """Close this thread's cached read-only GHCN connections.
 
     The pool is thread-local and otherwise lives until the thread dies,
-    at which point sqlite3 finalises the connections itself and warns.
+    at which point sqlite3 finalizes the connections itself and warns.
     Worker threads call this on the way out; the main thread's pool is
     closed at exit.
     """

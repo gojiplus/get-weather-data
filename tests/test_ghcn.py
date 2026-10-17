@@ -180,7 +180,7 @@ class TestReadOnlyPool:
 
 
 class TestPoolClosesItself:
-    """The read-only pool must not leave connections for sqlite3 to finalise."""
+    """The read-only pool must not leave connections for sqlite3 to finalize."""
 
     def test_pool_closes_its_connections(self, tmp_path) -> None:
         """close() shuts every pooled connection and empties the pool."""
