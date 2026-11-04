@@ -96,7 +96,7 @@ if submitted:
 
     # Table + download
     display = frame[["date", *grid_fields]].copy()
-    st.dataframe(display, use_container_width=True, hide_index=True)
+    st.dataframe(display, width="stretch", hide_index=True)
     st.download_button(
         "Download CSV",
         frame.to_csv(index=False).encode(),
