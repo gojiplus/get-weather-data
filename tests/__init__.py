@@ -8,7 +8,7 @@ from typing import Any
 
 
 @contextmanager
-def capture(command: Any, *args: Any, **kwargs: Any) -> Generator[str, None, None]:
+def capture(command: Any, *args: Any, **kwargs: Any) -> Generator[str]:
     """Capture stdout from a command execution."""
     out, sys.stdout = sys.stdout, StringIO()
     try:

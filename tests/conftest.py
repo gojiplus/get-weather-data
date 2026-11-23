@@ -43,7 +43,7 @@ def sample_stations() -> list[Station]:
 
 
 @pytest.fixture
-def temp_db(tmp_path) -> Generator[Database, None, None]:
+def temp_db(tmp_path) -> Generator[Database]:
     """Create a temporary database, closed when the test ends."""
     db = Database(tmp_path / "test.sqlite")
     db.init_schema()
