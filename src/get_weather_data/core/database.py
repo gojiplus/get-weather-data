@@ -60,7 +60,7 @@ class Database:
         return self._local.conn  # type: ignore[no-any-return]
 
     @contextmanager
-    def connection(self) -> Generator[sqlite3.Connection, None, None]:
+    def connection(self) -> Generator[sqlite3.Connection]:
         """Context manager for database connection (uses pool)."""
         yield self._get_connection()
 
