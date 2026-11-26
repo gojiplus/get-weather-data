@@ -35,18 +35,18 @@ dependencies = [
 
 [project.optional-dependencies]
 fast = [
-    "scipy>=1.11",
+    "scipy>=1.14.1",
 ]
 pandas = [
-    "pandas>=2.0",
+    "pandas>=2.2.3",
 ]
 grid = [
-    "xarray>=2024.0",
-    "netCDF4>=1.6",
+    "xarray>=2025.1.2",
+    "netCDF4>=1.7.2",
 ]
 parquet = [
-    "pyarrow>=15.0",
-    "duckdb>=1.0",
+    "pyarrow>=18.0.0",
+    "duckdb>=1.1.1",
 ]
 
 [project.scripts]
